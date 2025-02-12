@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apogée To Omeka</title>
+    <script src="assets/js/d3.min.js"></script>
+</head>
+<body>
+    <h1>Apogée To Omeka</h1>
+    <input type="file" id="xmlFile" accept=".xml">
+    <button id="btnConvertToCSV" >Convert to CSV</button>
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>EC</th>
+                <th>Apogée</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td id="outputEC"></td>
+                <td  style="vertical-align: top;"><pre id="output"></pre></td>
+            </tr>
+        </tbody>
+    </table>
+    
+
+    <script type="module">
+        import {auth} from './modules/auth.js';
+
+        d3.select("#btnConvertToCSV").on('click',convertToCSV);
+
+        let a = new auth({
+            mail:'acehn@univ-paris8.fr',
+            apiOmk:'http://localhost/omk_gestForma/api/',
+            //apiOmk:'https://acehn.jardindesconnaissances.fr/api',
+            ident: 'Fe82ZlMwNP8KR88BKWzGNnF7eS5qChwr',
+            key:'Jo5RZc9S3qr79GAe2TZk9UBakWcZbP48',
+        });
+
+        //affiche les EC
+        a.omk.getAllItems("resource_class_id=113", data=>{
+            let filterEc = data.filter(d=>d['fup8:code'][0]['@value']=='no'),
+                divs = d3.select("#outputEC").selectAll('div').data(filterEc).enter()
+                    .append('div').attr("id", d => 'id'+d['o:id']);
+            divs.append('label').attr('for',d=>'code'+d['o:id'])
+                .text(d=>{
+                    let p = d['fup8:hasParcours'] ? d['fup8:hasParcours'][0].display_title : "";
+                    return p+' : '+d['o:title'];
+                });
+            divs.append('input')
+                .attr("id", d=>'code'+d['o:id'])
+                .attr('type','text')
+                .attr('value',d=>d['fup8:code'] ? d['fup8:code'][0]['@value'] : "vide");
+            divs.append('button')
+                .text('ok')
+                .on('click',(e,d)=>{
+                    console.log(d);                    
+                    let code = document.getElementById('code'+d['o:id']).value,
+                        dt = {'fup8:code':code};
+                    a.omk.updateRessource(d['o:id'], dt, 'items', null, 'PATCH',false, d);
+                });
+        }, false);
+                
+        
+        function convertToCSV() {
+            const fileInput = document.getElementById('xmlFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select an XML file first.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const xmlData = event.target.result;
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlData, 'text/xml');
+                const csvData = xmlToCSV(xmlDoc);
+                document.getElementById('output').textContent = csvData;
+            };
+            reader.readAsText(file);
+        }
+
+        function xmlToCSV(xml) {
+            //const xpath = "//LIST_G_NIVEAU/G_NIVEAU[NIVEAU<5]//LIST_G_COD_ELP_PERE1/G_COD_ELP_PERE1/LIST_G_COD_ELP_FILS/G_COD_ELP_FILS/G_COD_ELP1";
+            const xpath = "//LIST_G_NIVEAU/G_NIVEAU[NIVEAU<5]//G_COD_ELP1";
+
+            const rows = xml.evaluate(xpath, xml, null, XPathResult.ANY_TYPE, null);
+            const csvRows = [];
+
+            let row = rows.iterateNext();
+            if (row) {
+                const headers = Array.from(row.children).map(child => child.nodeName);
+                csvRows.push(headers.join(','));
+
+            }
+
+            while (row) {
+                const values = Array.from(row.children).map(child => child.textContent);
+                csvRows.push(values.join(','));
+                row = rows.iterateNext();
+            }
+           
+            return csvRows.join('\n');
+        }
+    </script>
+</body>
+</html></html>

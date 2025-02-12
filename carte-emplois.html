@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte des Emplois</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="assets/js/d3.min.js"></script>
+    <style>
+        #map {
+            height: 80vh;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Formations -> Competences -> Métiers -> Emplois</h1>
+        <div>
+            <label for="ddListeParcours">Sélectionner un parcours :</label>
+            <select id="ddListeParcours"></select>
+            <button id="btnChargeCarte" type="button">Afficher les offres</button>
+        </div>                             
+    </header>
+    <table style="width:100%;height:80%;">
+        <thead>
+            <tr>
+                <th>Filtres</th>
+                <th>Carte</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 20%;">
+                    <h3 id="titreParcours"></h3>
+                    <div id="filters"></div>  
+                </td>
+                <td  style="width: 80%;">
+                    <div id="map"></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script type="module">
+        import {auth} from './modules/auth.js';
+
+        let a = new auth({
+            mail:'acehn@univ-paris8.fr',
+            apiOmk:'http://localhost/omk_gestForma/api/',
+            //apiOmk:'https://acehn.jardindesconnaissances.fr/api',
+            ident: 'Fe82ZlMwNP8KR88BKWzGNnF7eS5qChwr',
+            key:'Jo5RZc9S3qr79GAe2TZk9UBakWcZbP48',
+        }), parcours, idParcours, itemParcours, token, tokenInput, jobs;
+        //chargement des mentions
+        a.omk.searchItems("resource_class_id=111", data=>{
+            parcours=data;
+            d3.select("#ddListeParcours")
+            .selectAll("option")
+                .data(parcours)
+                .enter()
+                .append("option")
+                .attr("value", d => d['o:id'])
+                .text(d => d['o:title']);
+        }, false)        
+        d3.select("#btnChargeCarte").on("click",() => {
+            idParcours = d3.select("#ddListeParcours").property("value");
+            itemParcours = parcours.find(d => d['o:id'] == idParcours);
+            d3.select("#titreParcours").text(itemParcours['o:title']);
+            // Appeler la fonction pour afficher les emplois sur la carte
+            fetchJobLocations();
+        });        
+
+        // Initialiser la carte
+        var map = L.map('map').setView([46.603354, 1.888334], 6); // Coordonnées de la France
+
+        // Ajouter une couche de tuiles OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Fonction pour récupérer les données de l'API France Travail
+        async function fetchJobLocations() {
+            //pour les tests 
+            d3.json("assets/data/testEmplois.json").then(data=>{
+                displayJobsOnMap(data);
+            })
+            /*récupère les métiers et ou les appellations
+            let codes = await getCodeRome(); 
+            token = await getFranceTravailToken();
+            jobs=[];
+            queryAllFranceTravail(codes, 0);
+            */
+        }
+
+        function queryAllFranceTravail(codes, num=0){
+            //This promise will resolve when the network call succeeds
+            //Feel free to make a REST fetch using promises and assign it to networkPromise
+            let url = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?",
+                networkPromise = queryFranceTravail(url+codes[num].type+"="+codes[num].code),
+            //This promise will resolve when 2 seconds have passed
+                timeOutPromise = new Promise(function(resolve, reject) {
+                    // 1 Second delay
+                    setTimeout(resolve, 1000, 'Timeout Done');
+                });
+
+            Promise.all(
+            [networkPromise, timeOutPromise]).then(function(values) {
+                console.log("Atleast 2 secs + TTL (Network/server)");
+                codes[num].jobs=values[0];
+                if(codes.length > num+1){
+                    queryAllFranceTravail(codes, num+1);
+                }else{
+                    displayJobsOnMap(codes);
+                }
+            });
+        }
+
+        // Fonction pour la requête sur France Travail
+        async function queryFranceTravail(url) {
+            let reponse = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer '+token
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching the data:', error);
+                return false;
+            });
+
+            if(!reponse.ok){
+                console.log(reponse);
+                return false;
+            }else{
+                return await reponse.json();
+            }
+        }
+
+        // Fonction pour afficher les emplois sur la carte
+        async function displayJobsOnMap(codes) {
+            console.log(codes);
+            d3.select("#filters").selectAll("div").remove();
+            d3.select("#filters").selectAll("div").data(codes).enter().append("div").html(d=>d.code+' : '+d.title);
+            codes.forEach(c=>{
+                c.jobs.resultats.forEach(job => {
+                    if(job.lieuTravail.latitude){
+                        L.marker([job.lieuTravail.latitude, job.lieuTravail.longitude]).addTo(map)
+                        .bindPopup(`<b>${job.intitule}</b>`);
+                    }
+                });
+            })
+        }
+
+        // récupère les codes ROME métiers et applications
+        async function getCodeRome() {
+            let url = a.omk.api.replace('api','s')+'formations-competences-certifications-metiers-emplois/page/ajax?json=1&helper=gestion&action=getRomeForMention&id='+idParcours,
+            response = await fetch(url);
+            return await response.json();
+        }
+
+        // récupère un token francetravail valid
+        async function getFranceTravailToken() {
+            let response = await fetch("francetravail.php");
+            return await response.text();
+        }
+        
+    </script>
+</body>
+</html>

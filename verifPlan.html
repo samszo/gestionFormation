@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification des plans de service</title>
+
+    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
+
+    <script src="assets/js/handsontable.full.min.js"></script>
+    <script src="assets/js/d3.min.js"></script>
+</head>
+<body>
+    <button id="export-file">ExPORT</button>
+
+    <div id="gridEcsHeures" style="height: 600px;width:1000px;"></div>
+    <div id="gridIntHeures" style="height: 300px;width:1000px"></div>
+    
+<script>
+    let intervenants, services, ecsPlan, ecsMaq, sommes={'intNbHeure':[],'ecsNbHeure':[]}, typeheures = ['TP', 'TD', 'CM']
+        ,recid = 0, s = {};
+    Promise.all([
+        d3.csv("assets/data/hn/listeEC-HN.csv"),
+        d3.csv("assets/data/hn/servicesSTN_23-24-rea.csv"),
+        d3.csv("assets/data/hn/servicesSTN_24-25-prev.csv")
+    ]).then(function([ecsMaq, rea, prev]){
+        services = rea;//.concat(prev);
+        // groupe les plans par intervenant
+        intervenants = d3.group(services, d => d.Intervenant);
+        // groupe les plans par EC en enlevant les référentiel
+        ecsPlan = d3.group(services.filter(d=>d['Code enseignement']?true:false), d=>d['Code enseignement']);
+        //calcule le total des heures pour les intervenants
+        recid = 0, s = {}; 
+        intervenants.forEach((int,i) => {
+            s = {'recid':recid,'nom':i,'TP':0, 'TD':0, 'CM':0, 'TOT':0};
+            int.forEach(v=>{
+                typeheures.forEach(th=>{
+                    if(v[th])v[th]=parseFloat(v[th].replace(',','.'));
+                    else v[th]=0;
+                    s[th]+=v[th];
+                });
+            })
+            s.TOT = s.TP+s.TD+s.CM;
+            sommes.intNbHeure.push(s);
+            recid++;
+        });                
+        //calcule le total des heures pour les formations
+        recid = 0, s = {};
+        ecsPlan.forEach((ecs,i) => {
+            s = {'recid':recid,'ec':i,'TP':0, 'TD':0, 'CM':0, 'TOT':0
+                ,'Code formation':ecs[0]["Code formation"]
+                ,'Enseignement':ecs[0]["Enseignement ou fonction référentielle"]
+                , 'intNbH':""};
+            ecs.forEach(v=>{
+                typeheures.forEach(th=>{
+                    if (v[th]){
+                        if(typeof v[th] === 'string' || v[th] instanceof String)
+                            v[th]=parseFloat(v[th].replace(',','.'));
+                    }
+                    else v[th]=0;
+                    s[th] += v[th];
+                });
+                s.intNbH += v.Intervenant+' ('+(v.TP+v.TD+v.CM)+'),';
+            })
+            s.TOT = s.TP+s.TD+s.CM;
+            s.intNbH = s.intNbH.slice(0,-1);
+            sommes.ecsNbHeure.push(verifEcMaquette(s));
+            recid++;
+        });                
+        /*ajoute les ec sans plan de service
+        recid = sommes.ecsNbHeure.length;
+        ecsMaq.forEach(e=>{
+            if(!e.plan && e['VH chargé']!="0"){
+                s = {'recid':recid,'ec':e['Intitulés des EC de chaque UE'],'TP':0, 'TD':0, 'CM':0, 'TOT':0, 'intNbH':"", 'verif':'no'};
+                s.apogee = e.APOGEE;
+                s.dip=e.formation;
+                s.charge=e['VH chargé'];
+                s.verif= - s.charge;
+                sommes.ecsNbHeure.push(s);
+                recid++;                
+            }
+        })
+        */
+
+        let headers = Object.keys(sommes.ecsNbHeure[3]);
+        let hotCours = new Handsontable(d3.select('#gridEcsHeures').node(), {
+            className: 'htDark',
+            afterGetColHeader: function(col, TH){
+                TH.className = 'darkTH'
+            },
+            colHeaders: true,
+            rowHeaders: true,
+            data:sommes.ecsNbHeure,
+            colHeaders: headers,
+            height: '800px',
+            autoWrapRow: true,
+            autoWrapCol: true,
+            manualColumnResize: true,
+            width:'100%',
+            colWidths: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
+            stretchH: 'last',
+            licenseKey: 'non-commercial-and-evaluation',
+            customBorders: true,
+            dropdownMenu: true,
+            multiColumnSorting: true,
+            filters: true,
+            columns: getCellEditor(headers),
+            allowInsertColumn: false,
+            copyPaste: false,
+            search: true,                        
+        }); 
+        
+        const exportPlugin = hotCours.getPlugin('exportFile');
+        const button = document.querySelector('#export-file');
+
+        button.addEventListener('click', () => {
+        exportPlugin.downloadFile('csv', {
+            bom: false,
+            columnDelimiter: ',',
+            columnHeaders: true,
+            exportHiddenColumns: true,
+            exportHiddenRows: true,
+            fileExtension: 'csv',
+            filename: 'ExportVerifServices_[YYYY]-[MM]-[DD]',
+            mimeType: 'text/csv',
+            rowDelimiter: '\r\n',
+            rowHeaders: true,
+        });
+        });        
+
+
+    });
+
+    function getCellEditor(headers){
+        let editors = [];
+        headers.forEach(h=>{
+            switch (h) {
+                case 'choix':
+                    editors.push({data:h, type: 'checkbox'})                          
+                    break;
+                case 'date':
+                    editors.push({data:h, type:'date'})                  
+                    break;                    
+                default:
+                    editors.push({data:h, type: 'text'})                  
+                    break;
+            }
+          })
+        return editors;
+    }
+
+
+    function verifEcMaquette(ecPlan){
+        let charge=0, nbGroupe=1, dip="", code  = ecPlan.ec.split(' - ')[0],
+        ecTest = ecsMaq.filter(e=>e['Intitulés des EC de chaque UE']==""), 
+        ecMaq = ecsMaq.filter(e=>e.APOGEE==code);
+        if(ecMaq.length==0){
+            ecPlan['comment']='APOGEE pas trouvé';
+            ecMaq = ecsMaq.filter(e=>e['Intitulés des EC de chaque UE']==ecPlan.Enseignement);
+            if(ecMaq.length==0)ecPlan['comment']+=' - Intitulés pas trouvé';
+        }
+        ecPlan['verif']='no';
+        if(ecMaq.length>0){
+            ecPlan['comment']=ecMaq.length+' Intitulés';
+            /*
+            ecMaq.sort(function (a, b) {
+                return Number(b['CH chargé']) - Number(a['CH chargé']);
+            });
+            */            
+            ecMaq.forEach(ec => {
+                if(charge < Number(ec['Charge enseignenement en HTD']))charge = Number(ec['Charge enseignenement en HTD']);
+                if(ec['Nbs de groupes'] && nbGroupe < Number(ec['Nbs de groupes']))nbGroupe = Number(ec['Nbs de groupes']);
+                
+                dip += ec.formation+',';
+                ec.plan=ecPlan.TOT;
+            });
+            //ecPlan.apogee = code
+            ecPlan['dip']=dip.slice(0, -1);
+            ecPlan['charge']=charge;
+            ecPlan['Nbs de groupes']=nbGroupe;
+            //ecPlan['verif']=ecPlan.TOT - (charge*nbGroupe);
+            ecPlan['verif']=ecPlan.TOT - charge;
+       }
+        return ecPlan;
+    }
+
+
+/**
+ * merci beaucoup à http://jsfiddle.net/hybrid13i/JXrwM/
+ * @param {*} JSONData 
+ * @param {*} ReportTitle 
+ * @param {*} ShowLabel 
+ */
+ function JSONToCSVConvertor(JSONData, ReportTitle, ShowLabel) {
+    //If JSONData is not an object then JSON.parse will parse the JSON string in an Object
+    var arrData = typeof JSONData != 'object' ? JSON.parse(JSONData) : JSONData;
+    
+    var CSV = '';    
+    //Set Report title in first row or line    
+    //CSV += ReportTitle + '\r\n\n';
+
+    //This condition will generate the Label/Header
+    if (ShowLabel) {
+        var row = "";
+        
+        //This loop will extract the label from 1st index of on array
+        for (var index in arrData[0]) {
+            
+            //Now convert each value to string and comma-seprated
+            row += index + ',';
+        }
+
+        row = row.slice(0, -1);
+        
+        //append Label row with line break
+        CSV += row + '\r\n';
+    }
+    
+    //1st loop is to extract each row
+    for (var i = 0; i < arrData.length; i++) {
+        var row = "";
+        
+        //2nd loop will extract each column and convert it in string comma-seprated
+        for (var index in arrData[i]) {
+            row += '"' + arrData[i][index] + '",';
+        }
+
+        row.slice(0, row.length - 1);
+        
+        //add a line break after each row
+        CSV += row + '\r\n';
+    }
+
+    if (CSV == '') {        
+        alert("Invalid data");
+        return;
+    }   
+    
+    //Generate a file name
+    var fileName = "exportCSV_";
+    //this will remove the blank-spaces from the title and replace it with an underscore
+    fileName += ReportTitle.replace(/ /g,"_");   
+    
+    //Initialize file format you want csv or xls
+    var uri = 'data:text/csv;charset=utf-8,' + CSV;//escape(CSV);
+    
+    // Now the little tricky part.
+    // you can use either>> window.open(uri);
+    // but this will not work in some browsers
+    // or you will not get the correct file extension    
+    
+    //this trick will generate a temp <a /> tag
+    var link = document.createElement("a");    
+    link.href = uri;
+    
+    //set the visibility hidden so it will not effect on your web-layout
+    link.style = "visibility:hidden";
+    link.download = fileName + ".csv";
+    
+    //this part will append the anchor tag and remove it after automatic click
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+
+</body>
+</html>

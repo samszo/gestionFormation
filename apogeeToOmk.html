@@ -9,7 +9,8 @@
 <body>
     <h1>Apogée To Omeka</h1>
     <input type="file" id="xmlFile" accept=".xml">
-    <button id="btnConvertToCSV" >Convert to CSV</button>
+    <button id="btnDiplomeToCSV" >Diplome to CSV</button>
+    <button id="btnElementToCSV" >Element to CSV</button>
     <table id="dataTable">
         <thead>
             <tr>
@@ -29,8 +30,10 @@
     <script type="module">
         import {auth} from './modules/auth.js';
 
-        d3.select("#btnConvertToCSV").on('click',convertToCSV);
+        d3.select("#btnDiplomeToCSV").on('click',convertXMLtoCSV);
+        d3.select("#btnElementToCSV").on('click',convertXMLtoCSV);
 
+        
         let a = new auth({
             mail:'acehn@univ-paris8.fr',
             apiOmk:'http://localhost/omk_gestForma/api/',
@@ -64,7 +67,7 @@
         }, false);
                 
         
-        function convertToCSV() {
+        function convertXMLtoCSV(e) {
             const fileInput = document.getElementById('xmlFile');
             const file = fileInput.files[0];
             if (!file) {
@@ -77,15 +80,15 @@
                 const xmlData = event.target.result;
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlData, 'text/xml');
-                const csvData = xmlToCSV(xmlDoc);
+                const csvData = e.target.id == 'btnDiplomeToCSV' ? diplomeToCSV(xmlDoc) : elementToCSV(xmlDoc);
                 document.getElementById('output').textContent = csvData;
             };
             reader.readAsText(file);
         }
 
-        function xmlToCSV(xml) {
+        function diplomeToCSV(xml) {
             //const xpath = "//LIST_G_NIVEAU/G_NIVEAU[NIVEAU<5]//LIST_G_COD_ELP_PERE1/G_COD_ELP_PERE1/LIST_G_COD_ELP_FILS/G_COD_ELP_FILS/G_COD_ELP1";
-            const xpath = "//LIST_G_NIVEAU/G_NIVEAU[NIVEAU<5]//G_COD_ELP1";
+            const xpath = "//LIST_G_NIVEAU/G_NIVEAU[NIVEAU<6]//G_COD_ELP1";
 
             const rows = xml.evaluate(xpath, xml, null, XPathResult.ANY_TYPE, null);
             const csvRows = [];
@@ -100,6 +103,31 @@
             while (row) {
                 const values = Array.from(row.children).map(child => child.textContent);
                 csvRows.push(values.join(','));
+                row = rows.iterateNext();
+            }
+           
+            return csvRows.join('\n');
+        }
+        function elementToCSV(xml) {
+            //const xpath = "//LIST_G_NIVEAU/G_NIVEAU[NIVEAU<5]//LIST_G_COD_ELP_PERE1/G_COD_ELP_PERE1/LIST_G_COD_ELP_FILS/G_COD_ELP_FILS/G_COD_ELP1";
+            const xpath = "//G_ELP";
+
+            const rows = xml.evaluate(xpath, xml, null, XPathResult.ANY_TYPE, null);
+            const csvRows = [];
+            const headers = ['COD_ELP','LIC_ELP','DAT_CRE_ELP','LIST_G_LSE'];
+            csvRows.push(headers.join(','));
+
+            let row = rows.iterateNext();
+            while (row) {
+                const values = Array.from(row.children).filter(n=>{
+                    return headers.includes(n.nodeName);
+                }).map(child => child.textContent);
+                /*récupère le nom de la formation
+                const rs = xml.evaluate("//G_LSE[contains(text(), '"+values[0]+"')]", xml, null, XPathResult.ANY_TYPE, null);
+                const r = rs.iterateNext();
+                values[3]=r.textContent;
+                */
+                csvRows.push(values.join(','));                
                 row = rows.iterateNext();
             }
            

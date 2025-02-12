@@ -24,8 +24,9 @@
         d3.csv("assets/data/hn/listeEC-HN.csv"),
         d3.csv("assets/data/hn/servicesSTN_23-24-rea.csv"),
         d3.csv("assets/data/hn/servicesSTN_24-25-prev.csv")
-    ]).then(function([ecsMaq, rea, prev]){
-        services = rea;//.concat(prev);
+    ]).then(function([maq, rea, prev]){
+        ecsMaq = maq;
+        services = prev;//rea;//.concat(prev);
         // groupe les plans par intervenant
         intervenants = d3.group(services, d => d.Intervenant);
         // groupe les plans par EC en enlevant les référentiel
@@ -154,33 +155,31 @@
     function verifEcMaquette(ecPlan){
         let charge=0, nbGroupe=1, dip="", code  = ecPlan.ec.split(' - ')[0],
         ecTest = ecsMaq.filter(e=>e['Intitulés des EC de chaque UE']==""), 
-        ecMaq = ecsMaq.filter(e=>e.APOGEE==code);
+        ecMaq = ecsMaq.filter(e=>e.COD_ELP1==code);
         if(ecMaq.length==0){
             ecPlan['comment']='APOGEE pas trouvé';
-            ecMaq = ecsMaq.filter(e=>e['Intitulés des EC de chaque UE']==ecPlan.Enseignement);
-            if(ecMaq.length==0)ecPlan['comment']+=' - Intitulés pas trouvé';
+            //ecMaq = ecsMaq.filter(e=>e['Intitulés des EC de chaque UE']==ecPlan.Enseignement);
+            //if(ecMaq.length==0)ecPlan['comment']+=' - Intitulés pas trouvé';
         }
         ecPlan['verif']='no';
         if(ecMaq.length>0){
             ecPlan['comment']=ecMaq.length+' Intitulés';
-            /*
-            ecMaq.sort(function (a, b) {
-                return Number(b['CH chargé']) - Number(a['CH chargé']);
-            });
-            */            
             ecMaq.forEach(ec => {
+                /*
                 if(charge < Number(ec['Charge enseignenement en HTD']))charge = Number(ec['Charge enseignenement en HTD']);
                 if(ec['Nbs de groupes'] && nbGroupe < Number(ec['Nbs de groupes']))nbGroupe = Number(ec['Nbs de groupes']);
-                
-                dip += ec.formation+',';
+                */
+                charge = Number(ec.NB_HEURE);
+                nbGroupe = Number(ec.NB_GROUPE);
+                dip += ec.parcours+',';
                 ec.plan=ecPlan.TOT;
             });
             //ecPlan.apogee = code
             ecPlan['dip']=dip.slice(0, -1);
             ecPlan['charge']=charge;
             ecPlan['Nbs de groupes']=nbGroupe;
-            //ecPlan['verif']=ecPlan.TOT - (charge*nbGroupe);
-            ecPlan['verif']=ecPlan.TOT - charge;
+            ecPlan['verif']=ecPlan.TOT - (charge*nbGroupe);
+            //ecPlan['verif']=ecPlan.TOT - charge;
        }
         return ecPlan;
     }

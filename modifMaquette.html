@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modification maquette</title>
+
+    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
+
+    <script src="assets/js/handsontable.full.min.js"></script>
+    <script src="assets/js/d3.min.js"></script>
+</head>
+<body>
+    <button id="export-file">ExPORT</button>
+    <button id="calculMaquette">Calculer</button>
+
+    <div id="gridEcs" style="height:600px;width:1000px;"></div>
+    <div id="resultats">
+        <h2>Résultats</h2>
+    </div>
+    
+<script>
+    let ecsMaq, sommes={'ecsNbHeure':[]}, typeheures = ['TD', 'CM'], headers;
+    d3.csv("assets/data/hn/listeEC-HN.csv").then(maq=>{
+        ecsMaq = maq.filter(ec=>{
+            return ec.LIC_NEL1=="EC" && ec.TEM_SUS_ELP1 != "O" && ec.COD_ELP1 != "M2MHYP"
+        })
+        ecsMaq = ecsMaq.map((ec,i)=>{
+            return {'recid':i,'parcours':ec.parcours,'code':ec.COD_ELP1,
+                'lib':ec.LIB ? ec.LIB : ec.LIC_ELP1,
+                'ects':ec.NBR_CRD_ELP,
+                'NB_HEURE':ec.NB_HEURE,
+                'NB_GROUPE':ec.NB_GROUPE,
+                'CM':ec.CM,
+                'TD':ec.TD,
+                'M1MGID':ec.M1MGID,
+                'M1MCRE':ec.M1MCRE,
+                'M1MNET':ec.M1MNET,
+                'M1MTRN':ec.M1MTRN,
+                'M1MMCP':ec.M1MMCP,
+                'M1DTDM':ec.M1DTDM,
+                'M1MMCP':ec.M1MMCP,
+                'M2MGID':ec.M2MGID,
+                'M2MCRE':ec.M2MCRE,
+                'M2MNET':ec.M2MNET,
+                'M2MTRN':ec.M2MTRN,
+                'M2MMCP':ec.M2MMCP,
+                'M2MACE':ec.M2MACE,
+                'M2DTDM':ec.M2DTDM,
+                'Nanterre':ec.Nanterre,
+                'M1Ergo':ec.M1Ergo,
+                'M1Info':ec.M1Info,
+                'M1Droit':ec.M1Droit,
+                'SoSkilled':ec.SoSkilled,
+                'Aegean':ec.Aegean,
+                'LasPalmas':ec.LasPalmas
+            }
+        })
+        //ajoute les colonne de correction        
+        headers = [];
+        ecsMaq.forEach((ec,n)=>{
+            Object.keys(ecsMaq[0]).forEach((h,i)=>{
+                if(n==0){
+                    headers.push(h);
+                    if(i>2)headers.push('cor-'+h);
+                }
+                if(i>3)ec[h]=ec[h] ? parseFloat(ec[h].replace(',','.')) : 0;
+                if(i>2)ec['cor-'+h]='';
+            })
+        })
+        let hotCours = new Handsontable(d3.select('#gridEcs').node(), {
+            className: 'htDark',
+            afterGetColHeader: function(col, TH){
+                TH.className = 'darkTH'
+            },
+            colHeaders: true,
+            rowHeaders: true,
+            data:ecsMaq,
+            colHeaders: headers,
+            height: '800px',
+            autoWrapRow: true,
+            autoWrapCol: true,
+            manualColumnResize: true,
+            width:'100%',
+            //colWidths: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
+            stretchH: 'last',
+            licenseKey: 'non-commercial-and-evaluation',
+            customBorders: true,
+            dropdownMenu: true,
+            multiColumnSorting: true,
+            filters: true,
+            columns: getCellEditor(headers),
+            allowInsertColumn: false,
+            copyPaste: false,
+            search: true,                        
+        }); 
+        
+        const exportPlugin = hotCours.getPlugin('exportFile');
+        document.querySelector('#export-file').addEventListener('click', () => {
+            exportPlugin.downloadFile('csv', {
+                bom: false,
+                columnDelimiter: ',',
+                columnHeaders: true,
+                exportHiddenColumns: true,
+                exportHiddenRows: true,
+                fileExtension: 'csv',
+                filename: 'ExportMaquette_[YYYY]-[MM]-[DD]',
+                mimeType: 'text/csv',
+                rowDelimiter: '\r\n',
+                rowHeaders: true,
+            });
+        });        
+
+        document.querySelector('#calculMaquette').addEventListener('click', () => {
+            sommes.ecsNbHeure=[];
+            let r = d3.select("#resultats"),
+                parcours = d3.group(ecsMaq, d => d.parcours),
+                recid=0;
+            parcours.forEach((par,i) => {
+                calculerHeures(recid, i, par);
+                recid++;
+                calculerHeures(recid, i, par, 'cor-');
+                recid++;
+            });
+            r.selectAll('div').remove();
+            r.selectAll('div').data(sommes.ecsNbHeure).enter().append('div')
+                .html(d=>d.nom+' = '+d.TOT+' - '+d.MUT);
+        });        
+
+    });
+
+    function calculerHeures(recid, n, par, prefix=""){
+        let s = {'recid':recid,'nom':prefix+n,'TOT':0,'MUT':0}, h;
+        par.forEach(p=>{
+            //calcul des heures globales
+            typeheures.forEach(th=>{
+                let nbH = p[prefix+'NB_HEURE'];
+                h = prefix+th;
+                let heure = p[h] ? nbH*p[h]/100 : 0; 
+                if(s[h]) s[h] += heure; 
+                else s[h] = heure;
+                s.TOT += heure;
+            });
+            //calcul des heures mutualisées
+            for (let index = 15;  index < headers.length; index++) {
+                h = prefix+headers[index];
+                if(p[h]){
+                    s.MUT += p[h];
+                }
+            } 
+        })
+        sommes.ecsNbHeure.push(s);
+    }
+
+    function getCellEditor(headers){
+        let editors = [];
+        headers.forEach(h=>{
+            switch (h) {
+                case 'choix':
+                    editors.push({data:h, type: 'checkbox'})                          
+                    break;
+                case 'date':
+                    editors.push({data:h, type:'date'})                  
+                    break;                    
+                default:
+                    if(h.substring(0, 4)=="cor-")editors.push({data:h, type: 'text'}) 
+                    else editors.push({data:h, readOnly: true})                 
+                    break;
+            }
+          })
+        return editors;
+    }
+
+</script>
+
+</body>
+</html>

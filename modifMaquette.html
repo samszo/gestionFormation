@@ -20,16 +20,22 @@
     </div>
     <div >
         <h2 id="resultats">Résultats</h2>
+        <div id="resultTotEC"><h3>Total maquette</h3></div>    
+        <div id="resultTotECHN"><h3>Total maquette HN</h3></div>    
+        <br></br>
         <button id="export-fileCalc">ExPORT</button>
         <button id="calculMaquette">Calculer</button>
         <div id="gridCalc" style="height:400px;width:1000px;"></div>    
     </div>
     
 <script>
-    let ecsMaq, sommes, typeheures = ['TD', 'CM'], headers;
+    let ecsMaq, sommes, typeheures = ['TD', 'CM'], headers, parcoursHN = ['M1MCRE','M2MCRE','M2MACE','M2MNET','M2DTDM','M1MGID','M1MTRN','M1DTDM','M2MMCP','M1MNET','M2MGID','M1MMCP','M2MTRN'];
 
     document.querySelector('#calculMaquette').addEventListener('click', () => {
-            sommes={'ecsNbHeure':[],'ecsMutua':{}};
+            sommes={'ecsNbHeure':[],'ecsMutua':{},
+                'ecsHN':{'mutua offerte':0,'mutua prise':0,'gain':0,'nbHeure':0,'nbHeureCharge':0,'TD':0,'TDcharge':0,'CM':0,'CMcharge':0},
+                'ecs':{'mutua offerte':0,'mutua prise':0,'gain':0,'nbHeure':0,'nbHeureCharge':0,'TD':0,'TDcharge':0,'CM':0,'CMcharge':0}
+            };
             let parcours = d3.group(ecsMaq, d => d.parcours),
                 recid=0;
             parcours.forEach((par,i) => {
@@ -39,12 +45,22 @@
                 calculerHeures(recid, i, par, 'cor-');
                 recid++;
                 */
-            });
+            });            
             sommes.ecsNbHeure.forEach(ec=>{
                 ec['mutua prise'] = sommes.ecsMutua[ec.nom] ? sommes.ecsMutua[ec.nom] : 0;
+                //calcule du total des heures
+                Object.keys(sommes.ecs).forEach((h,i)=>{
+                    sommes.ecs[h]+=ec[h];
+                    if (parcoursHN.includes(ec.nom)) sommes.ecsHN[h] += ec[h];
+                })
             })
             showResultats(sommes.ecsNbHeure);
-            d3.select("#resultats").text('Total Maquette = ');    
+            d3.select("#resultTotEC").selectAll('span').remove();    
+            d3.select("#resultTotEC").selectAll('span').data(Object.keys(sommes.ecs).map(k=>{return {'lib':k,'val':sommes.ecs[k]};})).enter().append('span')
+                .text(d=>d.lib+' = '+d.val+", ");    
+            d3.select("#resultTotECHN").selectAll('span').remove();    
+            d3.select("#resultTotECHN").selectAll('span').data(Object.keys(sommes.ecsHN).map(k=>{return {'lib':k,'val':sommes.ecsHN[k]};})).enter().append('span')
+                .text(d=>d.lib+' = '+d.val+", ");    
         });  
 
     d3.csv("assets/refs/listeEC-HNsimple.csv").then(maq=>{

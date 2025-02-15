@@ -12,19 +12,42 @@
     <script src="assets/js/d3.min.js"></script>
 </head>
 <body>
-    <button id="export-file">ExPORT</button>
-    <button id="calculMaquette">Calculer</button>
-
-    <div id="gridEcs" style="height:600px;width:1000px;"></div>
-    <div id="resultats">
-        <h2>Résultats</h2>
+    <div >
+        <h2>Maquette</h2>
+        <button id="export-file">ExPORT</button>
+        <button id="import-file">ImPORT</button>
+        <div id="gridEcs" style="height:400px;width:1000px;"></div>
+    </div>
+    <div >
+        <h2 id="resultats">Résultats</h2>
+        <button id="export-fileCalc">ExPORT</button>
+        <button id="calculMaquette">Calculer</button>
+        <div id="gridCalc" style="height:400px;width:1000px;"></div>    
     </div>
     
 <script>
-    let ecsMaq, sommes={'ecsNbHeure':[]}, typeheures = ['TD', 'CM'], headers;
-    d3.csv("assets/data/hn/listeEC-HN.csv").then(maq=>{
+    let ecsMaq, sommes={'ecsNbHeure':[],'ecsMutua':{}}, typeheures = ['TD', 'CM'], headers;
+
+    document.querySelector('#calculMaquette').addEventListener('click', () => {
+            sommes.ecsNbHeure=[];
+            let parcours = d3.group(ecsMaq, d => d.parcours),
+                recid=0;
+            parcours.forEach((par,i) => {
+                calculerHeures(recid, i, par);
+                recid++;
+                calculerHeures(recid, i, par, 'cor-');
+                recid++;
+            });
+            sommes.ecsNbHeure.forEach(ec=>{
+                ec['mutua prise'] = sommes.ecsMutua[ec.nom] ? sommes.ecsMutua[ec.nom] : 0;
+            })
+            showResultats(sommes.ecsNbHeure);
+            d3.select("#resultats").text('Total Maquette = ');    
+        });  
+
+    d3.csv("assets/refs/listeEC-HN.csv").then(maq=>{
         ecsMaq = maq.filter(ec=>{
-            return ec.LIC_NEL1=="EC" && ec.TEM_SUS_ELP1 != "O" && ec.COD_ELP1 != "M2MHYP"
+            return ec.LIC_NEL1=="EC" && ec.TEM_SUS_ELP1 != "O" && ec.parcours != "M2MHYP"
         })
         ecsMaq = ecsMaq.map((ec,i)=>{
             return {'recid':i,'parcours':ec.parcours,'code':ec.COD_ELP1,
@@ -34,6 +57,7 @@
                 'NB_GROUPE':ec.NB_GROUPE,
                 'CM':ec.CM,
                 'TD':ec.TD,
+                'hybride':ec.HYBRIDE,
                 'M1MGID':ec.M1MGID,
                 'M1MCRE':ec.M1MCRE,
                 'M1MNET':ec.M1MNET,
@@ -57,7 +81,7 @@
                 'LasPalmas':ec.LasPalmas
             }
         })
-        //ajoute les colonne de correction        
+        //ajoute les colonnes de correction        
         headers = [];
         ecsMaq.forEach((ec,n)=>{
             Object.keys(ecsMaq[0]).forEach((h,i)=>{
@@ -66,9 +90,13 @@
                     if(i>2)headers.push('cor-'+h);
                 }
                 if(i>3)ec[h]=ec[h] ? parseFloat(ec[h].replace(',','.')) : 0;
-                if(i>2)ec['cor-'+h]='';
+                if(i>2)ec['cor-'+h]= i > 3 ? '' : 0;
             })
-        })
+        })   
+        showMaquette(headers, ecsMaq);                
+    });
+
+    function showMaquette(headers, rows){
         let hotCours = new Handsontable(d3.select('#gridEcs').node(), {
             className: 'htDark',
             afterGetColHeader: function(col, TH){
@@ -76,9 +104,9 @@
             },
             colHeaders: true,
             rowHeaders: true,
-            data:ecsMaq,
+            data:rows,
             colHeaders: headers,
-            height: '800px',
+            height: '400px',
             autoWrapRow: true,
             autoWrapCol: true,
             manualColumnResize: true,
@@ -110,52 +138,97 @@
                 rowDelimiter: '\r\n',
                 rowHeaders: true,
             });
-        });        
+        });   
+    }
 
-        document.querySelector('#calculMaquette').addEventListener('click', () => {
-            sommes.ecsNbHeure=[];
-            let r = d3.select("#resultats"),
-                parcours = d3.group(ecsMaq, d => d.parcours),
-                recid=0;
-            parcours.forEach((par,i) => {
-                calculerHeures(recid, i, par);
-                recid++;
-                calculerHeures(recid, i, par, 'cor-');
-                recid++;
+    function showResultats(rows){
+        let colonnes = Object.keys(rows[0]);
+        let hotResult = new Handsontable(d3.select('#gridCalc').node(), {
+            className: 'htDark',
+            afterGetColHeader: function(col, TH){
+                TH.className = 'darkTH'
+            },
+            colHeaders: true,
+            rowHeaders: true,
+            data:rows,
+            colHeaders: colonnes,
+            height: '400px',
+            autoWrapRow: true,
+            autoWrapCol: true,
+            manualColumnResize: true,
+            width:'100%',
+            //colWidths: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
+            stretchH: 'last',
+            licenseKey: 'non-commercial-and-evaluation',
+            customBorders: true,
+            dropdownMenu: true,
+            multiColumnSorting: true,
+            filters: true,
+            columns: getCellEditor(colonnes),
+            allowInsertColumn: false,
+            copyPaste: false,
+            search: true,                        
+        }); 
+        
+        const exportPlugin = hotResult.getPlugin('exportFile');
+        document.querySelector('#export-fileCalc').addEventListener('click', () => {
+            exportPlugin.downloadFile('csv', {
+                bom: false,
+                columnDelimiter: ',',
+                columnHeaders: true,
+                exportHiddenColumns: true,
+                exportHiddenRows: true,
+                fileExtension: 'csv',
+                filename: 'ExportMaquetteCalcul_[YYYY]-[MM]-[DD]',
+                mimeType: 'text/csv',
+                rowDelimiter: '\r\n',
+                rowHeaders: true,
             });
-            r.selectAll('div').remove();
-            r.selectAll('div').data(sommes.ecsNbHeure).enter().append('div')
-                .html(d=>d.nom+' = '+d.TOT+' - '+d.MUT);
-        });        
+        });  
 
-    });
+    }
 
     function calculerHeures(recid, n, par, prefix=""){
-        let s = {'recid':recid,'nom':prefix+n,'TOT':0,'MUT':0}, h;
+        let s = {'recid':recid,'nom':prefix+n,'mutua offerte':0,'mutua prise':0,'gain':0};
         par.forEach(p=>{
             //calcul des heures globales
+            let nbH = p[prefix+'NB_HEURE'];
+            if(s[prefix+'nbHeure']) s[prefix+'nbHeure'] += nbH; 
+            else s[prefix+'nbHeure'] = nbH;
             typeheures.forEach(th=>{
-                let nbH = p[prefix+'NB_HEURE'];
-                h = prefix+th;
-                let heure = p[h] ? nbH*p[h]/100 : 0; 
-                if(s[h]) s[h] += heure; 
-                else s[h] = heure;
-                s.TOT += heure;
+                    let h = prefix+th;
+                    charge = calculCharge(nbH,th,p[h]);
+                if(s[prefix+'nbHeureCharge']) s[prefix+'nbHeureCharge'] += charge.c; 
+                else s[prefix+'nbHeureCharge'] = charge.c;
+                if(s[h]) s[h] += charge.h; 
+                else s[h] = charge.h;
+                if(s[h+'charge']) s[h+'charge'] += charge.c; 
+                else s[h+'charge'] = charge.c;
             });
             //calcul des heures mutualisées
-            for (let index = 15;  index < headers.length; index++) {
+            let mut = false;
+            for (let index = 16;  index < headers.length; index++) {
                 h = prefix+headers[index];
-                if(p[h]){
-                    s.MUT += p[h];
+                if(h!=prefix+p.parcours && p[h]){
+                    s.gain += p[h];
+                    mut=true;
+                    sommes.ecsMutua[h] = sommes.ecsMutua[h] ? sommes.ecsMutua[h]+p[h] : p[h]; 
                 }
             } 
+            if(mut)s['mutua offerte'] += nbH;
         })
         sommes.ecsNbHeure.push(s);
     }
 
-    function getCellEditor(headers){
+    function calculCharge(nbH,th,taux){
+        let heure = taux ? nbH*taux/100 : 0,
+            charge = th=='CM' ? heure*1.5 : heure; 
+        return {'h':heure,'c':charge};
+    }
+
+    function getCellEditor(cols){
         let editors = [];
-        headers.forEach(h=>{
+        cols.forEach(h=>{
             switch (h) {
                 case 'choix':
                     editors.push({data:h, type: 'checkbox'})                          
@@ -171,6 +244,35 @@
           })
         return editors;
     }
+
+    document.querySelector('#import-file').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+        input.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const csvData = e.target.result;
+                const parsedData = d3.csvParse(csvData);
+                ecsMaq=[];
+                //formate les data      
+                parsedData.forEach((ec,n)=>{
+                    let r = {};
+                    Object.keys(parsedData[0]).forEach((h,i)=>{
+                        if(h!=""){                            
+                            if(i>4)r[h]=ec[h] ? parseFloat(ec[h].replace(',','.')) : 0;
+                            else r[h]=ec[h];
+                        }
+                    })
+                    ecsMaq.push(r);
+                })  
+                showMaquette(Object.keys(ecsMaq[0]), ecsMaq);
+            };
+            reader.readAsText(file);
+        });
+        input.click();
+    });
 
 </script>
 

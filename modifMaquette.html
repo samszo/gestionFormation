@@ -26,17 +26,19 @@
     </div>
     
 <script>
-    let ecsMaq, sommes={'ecsNbHeure':[],'ecsMutua':{}}, typeheures = ['TD', 'CM'], headers;
+    let ecsMaq, sommes, typeheures = ['TD', 'CM'], headers;
 
     document.querySelector('#calculMaquette').addEventListener('click', () => {
-            sommes.ecsNbHeure=[];
+            sommes={'ecsNbHeure':[],'ecsMutua':{}};
             let parcours = d3.group(ecsMaq, d => d.parcours),
                 recid=0;
             parcours.forEach((par,i) => {
                 calculerHeures(recid, i, par);
                 recid++;
+                /*
                 calculerHeures(recid, i, par, 'cor-');
                 recid++;
+                */
             });
             sommes.ecsNbHeure.forEach(ec=>{
                 ec['mutua prise'] = sommes.ecsMutua[ec.nom] ? sommes.ecsMutua[ec.nom] : 0;
@@ -45,52 +47,19 @@
             d3.select("#resultats").text('Total Maquette = ');    
         });  
 
-    d3.csv("assets/refs/listeEC-HN.csv").then(maq=>{
-        ecsMaq = maq.filter(ec=>{
-            return ec.LIC_NEL1=="EC" && ec.TEM_SUS_ELP1 != "O" && ec.parcours != "M2MHYP"
-        })
-        ecsMaq = ecsMaq.map((ec,i)=>{
-            return {'recid':i,'parcours':ec.parcours,'code':ec.COD_ELP1,
-                'lib':ec.LIB ? ec.LIB : ec.LIC_ELP1,
-                'ects':ec.NBR_CRD_ELP,
-                'NB_HEURE':ec.NB_HEURE,
-                'NB_GROUPE':ec.NB_GROUPE,
-                'CM':ec.CM,
-                'TD':ec.TD,
-                'hybride':ec.HYBRIDE,
-                'M1MGID':ec.M1MGID,
-                'M1MCRE':ec.M1MCRE,
-                'M1MNET':ec.M1MNET,
-                'M1MTRN':ec.M1MTRN,
-                'M1MMCP':ec.M1MMCP,
-                'M1DTDM':ec.M1DTDM,
-                'M1MMCP':ec.M1MMCP,
-                'M2MGID':ec.M2MGID,
-                'M2MCRE':ec.M2MCRE,
-                'M2MNET':ec.M2MNET,
-                'M2MTRN':ec.M2MTRN,
-                'M2MMCP':ec.M2MMCP,
-                'M2MACE':ec.M2MACE,
-                'M2DTDM':ec.M2DTDM,
-                'Nanterre':ec.Nanterre,
-                'M1Ergo':ec.M1Ergo,
-                'M1Info':ec.M1Info,
-                'M1Droit':ec.M1Droit,
-                'SoSkilled':ec.SoSkilled,
-                'Aegean':ec.Aegean,
-                'LasPalmas':ec.LasPalmas
-            }
-        })
-        //ajoute les colonnes de correction        
+    d3.csv("assets/refs/listeEC-HNsimple.csv").then(maq=>{
+        //format les données        
         headers = [];
+        ecsMaq = maq;
         ecsMaq.forEach((ec,n)=>{
             Object.keys(ecsMaq[0]).forEach((h,i)=>{
                 if(n==0){
                     headers.push(h);
-                    if(i>2)headers.push('cor-'+h);
+                    //ajoute les colonnes de correction        
+                    //if(i>2)headers.push('cor-'+h);
                 }
                 if(i>3)ec[h]=ec[h] ? parseFloat(ec[h].replace(',','.')) : 0;
-                if(i>2)ec['cor-'+h]= i > 3 ? '' : 0;
+                //if(i>2)ec['cor-'+h]= i > 3 ? '' : 0;
             })
         })   
         showMaquette(headers, ecsMaq);                
@@ -207,7 +176,7 @@
             });
             //calcul des heures mutualisées
             let mut = false;
-            for (let index = 16;  index < headers.length; index++) {
+            for (let index = 9;  index < headers.length; index++) {
                 h = prefix+headers[index];
                 if(h!=prefix+p.parcours && p[h]){
                     s.gain += p[h];
@@ -228,7 +197,7 @@
 
     function getCellEditor(cols){
         let editors = [];
-        cols.forEach(h=>{
+        cols.forEach((h,i)=>{
             switch (h) {
                 case 'choix':
                     editors.push({data:h, type: 'checkbox'})                          
@@ -237,8 +206,12 @@
                     editors.push({data:h, type:'date'})                  
                     break;                    
                 default:
+                    /*
                     if(h.substring(0, 4)=="cor-")editors.push({data:h, type: 'text'}) 
-                    else editors.push({data:h, readOnly: true})                 
+                    else editors.push({data:h, readOnly: true})
+                    */                 
+                    if(i<=3)editors.push({data:h, type: 'text'}); 
+                    else editors.push({data:h, type: 'numeric'});
                     break;
             }
           })

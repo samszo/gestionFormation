@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modification maquette</title>
+
+    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
+
+    <script src="assets/js/handsontable.full.min.js"></script>
+    <script src="assets/js/d3.min.js"></script>
+</head>
+<body>
+    <table border="1" style="width: 100%;">
+        <tr>
+            <th>Maquette</th>
+            <th>Compétences</th>
+        </tr>
+        <tr>
+            <td style="vertical-align: top;">
+                <button id="setEcComp">Récupérer les compétences ROME des EC</button>
+                <button id="setEcPoidsBlocComp">Calculer le poids des Bloc de compétences</button>
+                <button id="export-file">ExPORT</button>
+                <div id="gridEcs" style="height:400px;width:300px;"></div>
+                <div>
+                    <ul id="ecComp">
+                    </ul>    
+                </div>
+
+            </td>
+            <td style="vertical-align: top;">
+                <table border="1">
+                    <tr id="blocsTitre">
+                    </tr>
+                </table>                           
+                <button id="getBlocComp">Récupérer les compétences ROME des blocs RNCP</button>
+                <button id="getBlocCompRome">Voir les compétences ROME</button>
+                <ul id="blocsComp">
+                </ul>
+            </td>
+        </tr>
+    </table>
+    
+    <script type="module">
+        import {auth} from './modules/auth.js';
+        import {semafor} from './modules/semafor.js';
+
+        let a = new auth({
+            mail:'acehn@univ-paris8.fr',
+            apiOmk:'http://localhost/omk_gestForma/api/',
+            //apiOmk:'https://acehn.jardindesconnaissances.fr/api',
+            ident: 'Fe82ZlMwNP8KR88BKWzGNnF7eS5qChwr',
+            key:'Jo5RZc9S3qr79GAe2TZk9UBakWcZbP48',
+        }),
+        sema = new semafor({'omk':a.omk}),
+        ficheRNCP, itemsBloc=[], blocSelect, thBlocs, colorBase="#0080003d", colorSelect="#80002d3d",
+        ecsMaq, finCharge=true,
+        headers = ["parcours","code","LIB","ECTS","BlocComp1","BlocComp2","BlocComp3","BlocComp4","BlocComp5","BlocComp6","BlocComp7","BlocComp8"];
+
+        document.querySelector('#getBlocComp').addEventListener('click', () => {
+            if (!blocSelect) {
+                alert('Veuillez choisir un bloc de compétence.');
+                return;
+            }
+            getSemaComp();
+        });  
+        document.querySelector('#getBlocCompRome').addEventListener('click', () => {
+            if (!blocSelect) {
+                alert('Veuillez choisir un bloc de compétence.');
+                return;
+            }
+            getBlocCompRome();
+        });  
+        document.querySelector('#setEcComp').addEventListener('click', () => {
+            if (!finCharge) {
+                alert('Veuillez attendre le chargement des données.');
+                return;
+            }
+            setSemaCompRome();
+        });  
+        document.querySelector('#setEcPoidsBlocComp').addEventListener('click', () => {
+            if (!finCharge) {
+                alert('Veuillez attendre le chargement des données.');
+                return;
+            }
+            calculePoidsBlocComp();
+        });
+        //pour le calcule automatique après sauvegarde des objets ecsMaq et itemsBloc
+        Promise.all([d3.json("assets/refs/blocComp.json"),d3.json("assets/refs/ecsMaqComp.json")]).then(values => {
+            ecsMaq=values[1];
+            itemsBloc=values[0];
+            //ajoute les colonnes de bloc compétences
+            let libBloc = {"parcours":"parcours","code":"code","LIB":"LIB","ECTS":"ECTS","BlocComp1":"no","BlocComp2":"no","BlocComp3":"no","BlocComp4":"no","BlocComp5":"no","BlocComp6":"no","BlocComp7":"no","BlocComp8":"no"};
+            itemsBloc.forEach((b,i)=>{
+                ecsMaq.forEach(e=>{
+                    e["BlocComp"+(i+1)]=calculePoids(b,e).poids;
+                })
+                libBloc["BlocComp"+(i+1)]=b["o:title"];
+            })  
+            ecsMaq.push(libBloc)
+            showMaquette(headers, ecsMaq);                
+        })
+
+        /*Pour la récupération des compétences via semafor  
+        d3.csv("assets/refs/listeEC-HNsimple.csv").then(maq=>{
+            //format les données        
+            ecsMaq = maq.map(ec=>{
+                    let e = {};
+                    headers.forEach(h=>e[h]=ec[h]);
+                    return e;
+                });
+            showMaquette(headers, ecsMaq);                
+        });
+        //récupère ls blocs de compétence
+        d3.json(a.apiOmk+"items/78933").then(data=>{
+            ficheRNCP = data;
+            thBlocs = d3.select("#blocsTitre").selectAll("th").data(ficheRNCP["rncp:hasBLOC_COMPETENCES"]).enter().append("th")
+                .style("cursor","zoom-in")
+                .style("background-color",colorBase)
+                .attr("id",d=>"blocComp"+d.value_resource_id)
+                .on("click",voirCompBloc).text(d=>d.display_title);
+            ficheRNCP["rncp:hasBLOC_COMPETENCES"].forEach(d=>document.getElementById("blocComp"+d.value_resource_id).click());
+        });
+        */
+
+        function voirCompBloc(e,d){
+            thBlocs.style("background-color",colorBase);
+            d3.select(e.currentTarget).style("background-color",colorSelect);
+            if(!itemsBloc[d.value_resource_id]){
+                itemsBloc[d.value_resource_id]=a.omk.getItem(d.value_resource_id);
+            }
+            blocSelect=itemsBloc[d.value_resource_id];            
+            let ulBlocsComp = d3.select("#blocsComp");
+            ulBlocsComp.selectAll("li").remove()
+            let ulBlocComp = ulBlocsComp.selectAll("li").data(itemsBloc[d.value_resource_id]["rncp:LISTE_COMPETENCES"]).enter().append("li")
+                .text(d=>d["@value"] ? d["@value"] : d.display_title)
+                .style("background-color",d=>d["@value"] ? colorBase : colorSelect)
+                .append("ul")
+                    .attr("id",(d,i)=>d.value_resource_id ? "rncpcomp"+d.value_resource_id : "rncpcomp"+i);
+            getBlocCompRome();
+        }
+
+        function getBlocCompRome(){
+            blocSelect["rncp:LISTE_COMPETENCES"].forEach(c=>{
+                if(c.value_resource_id){
+                    let oComp = a.omk.getItem(c.value_resource_id),
+                    ulCompRcnp = d3.select("#rncpcomp"+oComp["o:id"]);
+                    ulCompRcnp.selectAll("li").remove();
+                    ulCompRcnp.selectAll("li").data(oComp["rome:hasCompetence"]).enter().append("li")
+                        .html(d=>{
+                            return "<b>"+d["@annotation"]["rome:similarity"][0]["@value"]+"</b> "+d.display_title;
+                        })
+                    if(!blocSelect['romeComp'])blocSelect['romeComp']=[];
+                    blocSelect['romeComp'].push(oComp);
+                }
+            })
+        } 
+
+        async function getSemaComp(i=0){
+            //vérifie si les compétences du bloc sont décomposée
+            let c = blocSelect["rncp:LISTE_COMPETENCES"][i];
+            if(!c.value_resource_id){
+                console.log(c["@value"]);
+                let comp = await sema.search("Competences",c["@value"]),
+                    code = blocSelect["rncp:CODE"][0]["@value"]+'_comp'+i,
+                    dt = {'rt':'RNCP élément','c':'rncp:COMPETENCE',
+                        'dt':{'rncp:CODE':code,
+                            'rncp:LIBELLE':c["@value"],
+                        },
+                        'verif':{'rncp:LIBELLE':c["@value"]},
+                        'index':code
+                    },
+                    omkComp = await a.omk.getsetResource(dt);
+                    console.log(omkComp);
+                //met à jour le bloc de compétence
+                a.omk.updateRessource(blocSelect["o:id"], {"rncp:LISTE_COMPETENCES":{'rid':omkComp['o:id']}}, 'items', null, 'PUT',showFindComp,blocSelect);
+                //met à jour les similarités avec ROME
+                sema.setFind(omkComp,comp,showFindComp);
+            }
+            if(i<blocSelect["rncp:LISTE_COMPETENCES"].length-1){
+                setTimeout(() => {
+                    getSemaComp(i+1);
+                }, 1000);
+            }
+        }
+
+        async function getSemaCompRome(row,lib){
+            //récupère les compétences pour l'EC 
+            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",lib);
+            d3.select("#ecComp").selectAll('li').remove();
+            d3.select("#ecComp").selectAll('li').data( ecsMaq[row].semaFind.search_results).enter().append("li")
+                .attr('id',(d,i)=>'sema'+i)
+                .html(d=>{
+                    return "<b>"+d.similarity+"</b> "+d.text;
+                });
+            //calcul la similarité avec les blocs
+            let poidsDetails = [];
+            itemsBloc.forEach((ib,i)=>{
+                let cp = calculePoids(ib,ecsMaq[row]);
+                cp.details.forEach(d=>d.numBloc=i+1);
+                poidsDetails = poidsDetails.concat(cp.details);
+            })
+            //affiche le détails par compétence d'EC
+            let cpEcComp = d3.group(poidsDetails, d => d.i, d => d.titreBloc);
+            cpEcComp.forEach((ec,i) => {
+                let ul = d3.select('#sema'+i).append("ul");
+                ul.selectAll('li').data(ec).enter().append("li").html(d=>{
+                    return "<b>"+d3.sum(d[1], s=>s.simBloc)+"</b> Bloc "+d[1][0].numBloc;//+" : "+d[0];
+                });
+            }); 
+            //calcul l'échelle des blocs
+            let ECTS = parseInt(ecsMaq[row].ECTS),
+                blocPoids = d3.flatGroup(poidsDetails, d => d.numBloc).map(b => {
+                    return d3.sum(b[1], s=>s.simBloc+(s.simEc*2));
+                }),
+                extPoids = d3.extent(blocPoids),
+                rangePoids = [1,ECTS],//d3.range(1,ECTS+1),//.map(r=>r+""),[1,ECTS],// 
+                //scalePoids = d3.scaleBand(rangePoids, extPoids),
+                //scalePoids = d3.scaleOrdinal(extPoids,rangePoids),
+                //
+                scalePoids = d3.scaleLinear(extPoids,rangePoids),                
+                T = scalePoids.ticks(8),
+                f = scalePoids.tickFormat(8, "+%"),
+                leg = T.map(f),
+                //
+                ecBlocPoids = d3.flatGroup(poidsDetails, d => d.numBloc).map(b => {
+                    let c = {'bloc':b[0],'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2))};
+                    c.poidsEcts = scalePoids(c.poids);
+                    c["%ects"] = f(c.poids);
+                    return c;
+                });
+            //ordonne le résultat pour calculer le nombre d'ECTS
+            ecBlocPoids = d3.sort(ecBlocPoids, d => d.poidsEcts);
+            //attribut les ects
+            console.log(leg);
+            console.log(ecBlocPoids);
+
+        }
+
+        function calculePoids(bloc,ec){
+            let poids = 0, details=[];
+            bloc.romeComp.forEach(rc=>{
+                rc["rome:hasCompetence"].forEach(hc=>{
+                    let romeComp = hc,
+                        sim =  parseFloat(hc["@annotation"]["rome:similarity"][0]["@value"]),
+                        code = hc["@annotation"]["rome:codeOgr"][0]["@value"];
+                    ec.semaFind.search_results.forEach((sr,i)=>{
+                        let result = "";
+                        if(sr.data.code_ogr==code){
+                            details.push({'idBloc':rc["o:id"],'titreBloc':rc["o:title"],'i':i,'type':sr.data.item_type,'code':code,'titre':sr.data.titre,'simBloc':sim,'simEc':parseFloat(sr.similarity)})
+                            poids+=sim+parseFloat(sr.similarity);
+                        }
+                    })
+                })
+            })
+            return {"poids":poids,"details":details};
+        }
+
+        async function calculePoidsBlocComp(){
+            console.log('test');
+        }
+
+        async function setSemaCompRome(row=0){
+            console.log(row+" : "+ecsMaq[row].LIB);
+            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",ecsMaq[row].LIB);
+            let comp = ecsMaq[row].semaFind;
+            await getSemaCompRome(row,ecsMaq[row].LIB)
+            if(row < ecsMaq.length-1)setSemaCompRome(row+1);
+        }
+
+
+
+        function showFindComp(data){
+            console.log(data);
+        }
+
+        function showMaquette(headers, rows){
+            let hotCours = new Handsontable(d3.select('#gridEcs').node(), {
+                className: 'htDark',
+                afterGetColHeader: function(col, TH){
+                    TH.className = 'darkTH'
+                },
+                colHeaders: true,
+                rowHeaders: true,
+                data:rows,
+                colHeaders: headers,
+                height: '400px',
+                autoWrapRow: true,
+                autoWrapCol: true,
+                manualColumnResize: true,
+                width:'100%',
+                stretchH: 'last',
+                licenseKey: 'non-commercial-and-evaluation',
+                customBorders: true,
+                dropdownMenu: true,
+                multiColumnSorting: true,
+                filters: true,
+                columns: getCellEditor(headers),
+                allowInsertColumn: false,
+                copyPaste: false,
+                search: true,
+                selectionMode: 'single', // 'single', 'range' or 'multiple',
+                afterSelection: (row, column, row2, column2, preventScrolling, selectionLayerLevel) => {
+                    const lib = hotCours.getDataAtCell(row,2);
+                    console.log(lib);
+                    getSemaCompRome(row,lib);
+                    preventScrolling.value = true;
+                }                        
+            }); 
+            const exportPlugin = hotCours.getPlugin('exportFile');
+            document.querySelector('#export-file').addEventListener('click', () => {
+                exportPlugin.downloadFile('csv', {
+                    bom: false,
+                    columnDelimiter: ',',
+                    columnHeaders: true,
+                    exportHiddenColumns: true,
+                    exportHiddenRows: true,
+                    fileExtension: 'csv',
+                    filename: 'EcBlocCompetence_[YYYY]-[MM]-[DD]',
+                    mimeType: 'text/csv',
+                    rowDelimiter: '\r\n',
+                    rowHeaders: true,
+                });
+            });   
+            
+        }
+
+        
+
+        function getCellEditor(cols){
+            let editors = [];
+            cols.forEach((h,i)=>{
+                switch (h) {
+                    case 'choix':
+                        editors.push({data:h, type: 'checkbox'})                          
+                        break;
+                    case 'code':
+                        editors.push({data:h, readOnly: true})                  
+                        break;                    
+                    case 'date':
+                        editors.push({data:h, type:'date'})                  
+                        break;                    
+                    default:
+                        /*
+                        if(h.substring(0, 4)=="cor-")editors.push({data:h, type: 'text'}) 
+                        else editors.push({data:h, readOnly: true})
+                        */                 
+                        if(i<=3)editors.push({data:h, type: 'text'}); 
+                        else editors.push({data:h, type: 'numeric'});
+                        break;
+                }
+            })
+            return editors;
+        }
+
+    </script>
+
+</body>
+</html>

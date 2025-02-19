@@ -1,4 +1,5 @@
 <?php
+include('keys.php');
 
 $type = isset($_GET['type']) ? $_GET['type'] : "Appellations";
 $search = isset($_GET['search']) ? $_GET['search'] : "codeur";

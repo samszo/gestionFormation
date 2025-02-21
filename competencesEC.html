@@ -98,6 +98,7 @@
                 })
                 libBloc["BlocComp"+(i+1)]=b["o:title"];
             })  
+            //calcul 
             ecsMaq.push(libBloc)
             showMaquette(headers, ecsMaq);                
         })
@@ -212,28 +213,36 @@
             //calcul l'échelle des blocs
             let ECTS = parseInt(ecsMaq[row].ECTS),
                 blocPoids = d3.flatGroup(poidsDetails, d => d.numBloc).map(b => {
-                    return d3.sum(b[1], s=>s.simBloc+(s.simEc*2));
+                    return {
+                        'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2)),
+                        'poidsBloc':d3.sum(b[1], s=>s.simBloc),
+                        'poidsEc':d3.sum(b[1], s=>s.simEc),
+                        'nbEc':b[1].length,
+                        'bloc':b[0]
+                    };
                 }),
-                extPoids = d3.extent(blocPoids),
-                rangePoids = [1,ECTS],//d3.range(1,ECTS+1),//.map(r=>r+""),[1,ECTS],// 
+                extPoids = d3.extent(blocPoids.map(bp=>bp.poids)),
+                rangePoids = [0,ECTS],//d3.range(1,ECTS+1),//.map(r=>r+""),[1,ECTS],// 
                 //scalePoids = d3.scaleBand(rangePoids, extPoids),
                 //scalePoids = d3.scaleOrdinal(extPoids,rangePoids),
                 //
-                scalePoids = d3.scaleLinear(extPoids,rangePoids),                
-                T = scalePoids.ticks(8),
-                f = scalePoids.tickFormat(8, "+%"),
+                scalePoids = d3.scaleLinear(extPoids,[0,1]),
+                scaleEcts = d3.scaleLinear(rangePoids),                
+                /*
+                T = scalePoids.ticks(10),
+                f = scalePoids.tickFormat(10,"%"),
                 leg = T.map(f),
-                //
+                */
                 ecBlocPoids = d3.flatGroup(poidsDetails, d => d.numBloc).map(b => {
                     let c = {'bloc':b[0],'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2))};
                     c.poidsEcts = scalePoids(c.poids);
-                    c["%ects"] = f(c.poids);
+                    c["ects"] = scaleEcts(c.poidsEcts);//f(c.poids);
                     return c;
                 });
             //ordonne le résultat pour calculer le nombre d'ECTS
             ecBlocPoids = d3.sort(ecBlocPoids, d => d.poidsEcts);
             //attribut les ects
-            console.log(leg);
+            console.log(extPoids);
             console.log(ecBlocPoids);
 
         }

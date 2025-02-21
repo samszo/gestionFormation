@@ -1955,7 +1955,7 @@
         "parcours": "M1MNET",
         "code": "DMA1ED01",
         "LIB": "Atelier génération de texte",
-        "ECTS": "",
+        "ECTS": "3",
         "semaFind": {
             "search_results": [
                 {
@@ -2199,7 +2199,7 @@
         "parcours": "M1MNET",
         "code": "DMA1ED02",
         "LIB": "Atelier texte animé et multimédia",
-        "ECTS": "",
+        "ECTS": "3",
         "semaFind": {
             "search_results": [
                 {
@@ -11227,7 +11227,7 @@
         "parcours": "SoSkilled",
         "code": "DP8LEK20",
         "LIB": "Initiation à la programmation no code : idéation autour de besoins personnels et co-construction de réponses numériques",
-        "ECTS": "",
+        "ECTS": "3",
         "semaFind": {
             "search_results": [
                 {
@@ -21353,7 +21353,7 @@
         "parcours": "M1MNET",
         "code": "DL0ZEA03",
         "LIB": "Eng Info STN: M1 NET",
-        "ECTS": "",
+        "ECTS": "3",
         "semaFind": {
             "search_results": [
                 {
@@ -21475,7 +21475,7 @@
         "parcours": "M2MNET",
         "code": "DL0ZEA04",
         "LIB": "Eng Info STN: M2 NET",
-        "ECTS": "",
+        "ECTS": "3",
         "semaFind": {
             "search_results": [
                 {
@@ -22207,7 +22207,7 @@
         "parcours": "M2MNET",
         "code": "DMA4ESC2",
         "LIB": "Stage (4-6 mois)",
-        "ECTS": "",
+        "ECTS": "3",
         "semaFind": {
             "search_results": [
                 {

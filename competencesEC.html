@@ -55,8 +55,10 @@
         }),
         sema = new semafor({'omk':a.omk}),
         ficheRNCP, itemsBloc=[], blocSelect, thBlocs, colorBase="#0080003d", colorSelect="#80002d3d",
-        ecsMaq, finCharge=true,
-        headers = ["parcours","code","LIB","ECTS","BlocComp1","BlocComp2","BlocComp3","BlocComp4","BlocComp5","BlocComp6","BlocComp7","BlocComp8"];
+        ecsMaq, finCharge=true, renforcePoidsEc=1, renforcePoidsBloc=2, renforcePoidsPositif=2,
+        headers = ["parcours","code","LIB","ECTS","verifECTS",
+            "BlocComp1","BlocComp2","BlocComp3","BlocComp4","BlocComp5","BlocComp6","BlocComp7","BlocComp8",
+            "BlocComp1poids","BlocComp2poids","BlocComp3poids","BlocComp4poids","BlocComp5poids","BlocComp6poids","BlocComp7poids","BlocComp8poids"];
 
         document.querySelector('#getBlocComp').addEventListener('click', () => {
             if (!blocSelect) {
@@ -91,13 +93,25 @@
             ecsMaq=values[1];
             itemsBloc=values[0];
             //ajoute les colonnes de bloc compétences
-            let libBloc = {"parcours":"parcours","code":"code","LIB":"LIB","ECTS":"ECTS","BlocComp1":"no","BlocComp2":"no","BlocComp3":"no","BlocComp4":"no","BlocComp5":"no","BlocComp6":"no","BlocComp7":"no","BlocComp8":"no"};
+            let libBloc = {"parcours":"parcours","code":"code","LIB":"LIB","ECTS":"ECTS","verifECTS":"verifECTS",
+                "BlocComp1":"no","BlocComp2":"no","BlocComp3":"no","BlocComp4":"no","BlocComp5":"no","BlocComp6":"no","BlocComp7":"no","BlocComp8":"no",
+                "BlocComp1poids":0,"BlocComp2poids":0,"BlocComp3poids":0,"BlocComp4poids":0,"BlocComp5poids":0,"BlocComp6poids":0,"BlocComp7poids":0,"BlocComp8poids":0
+                };
             itemsBloc.forEach((b,i)=>{
-                ecsMaq.forEach(e=>{
-                    e["BlocComp"+(i+1)]=calculePoids(b,e).poids;
-                })
                 libBloc["BlocComp"+(i+1)]=b["o:title"];
+                libBloc["BlocComp"+(i+1)+"poids"]=b["o:id"];
             })  
+            ecsMaq.forEach((e,j)=>{
+                calculNbEcts(e);
+                e.verifECTS = 0;
+                e.blocEcts.forEach((bloc,i)=>{
+                    e["BlocComp"+bloc.bloc]= bloc.ects;
+                    e["BlocComp"+bloc.bloc+"poids"]= bloc.poids;
+                    e.verifECTS += bloc.ects;
+                })
+                e.verifECTS -= e["ECTS"];
+            })
+            
             //calcul 
             ecsMaq.push(libBloc)
             showMaquette(headers, ecsMaq);                
@@ -186,35 +200,57 @@
             }
         }
 
-        async function getSemaCompRome(row,lib){
+        async function getSemaCompRome(code,lib){
+            let ec = ecsMaq.filter(e=>e.code==code)[0];
             //récupère les compétences pour l'EC 
-            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",lib);
+            ec.semaFind = ec.semaFind ? ec.semaFind : await sema.search("Competences",lib);
             d3.select("#ecComp").selectAll('li').remove();
-            d3.select("#ecComp").selectAll('li').data( ecsMaq[row].semaFind.search_results).enter().append("li")
+            d3.select("#ecComp").selectAll('li').data( ec.semaFind.search_results).enter().append("li")
                 .attr('id',(d,i)=>'sema'+i)
                 .html(d=>{
                     return "<b>"+d.similarity+"</b> "+d.text;
                 });
-            //calcul la similarité avec les blocs
-            let poidsDetails = [];
-            itemsBloc.forEach((ib,i)=>{
-                let cp = calculePoids(ib,ecsMaq[row]);
-                cp.details.forEach(d=>d.numBloc=i+1);
-                poidsDetails = poidsDetails.concat(cp.details);
-            })
+            //recalcul les poids
+            calculNbEcts(ec);
             //affiche le détails par compétence d'EC
-            let cpEcComp = d3.group(poidsDetails, d => d.i, d => d.titreBloc);
+            let cpEcComp = d3.group(ec.poidsDetails, d => d.i, d => d.titreBloc);
             cpEcComp.forEach((ec,i) => {
                 let ul = d3.select('#sema'+i).append("ul");
                 ul.selectAll('li').data(ec).enter().append("li").html(d=>{
                     return "<b>"+d3.sum(d[1], s=>s.simBloc)+"</b> Bloc "+d[1][0].numBloc;//+" : "+d[0];
                 });
-            }); 
+            });             
+
+        }
+
+        function calculSimilariteBlocEc(ec){
+            //calcul la similarité avec les blocs
+            let poidsDetails = [];
+            itemsBloc.forEach((ib,i)=>{
+                let cp = calculePoids(ib,ec);
+                cp.details.forEach(d=>d.numBloc=i+1);
+                poidsDetails = poidsDetails.concat(cp.details);
+            })
+            return poidsDetails;
+        }
+
+        function renforcePoids(s){
+            return (
+                (s.simBloc > 0 ? s.simBloc*renforcePoidsPositif : s.simBloc)
+                    *renforcePoidsBloc)
+                +(
+                    (s.simEc > 0 ? s.simEc*renforcePoidsPositif : s.simEc)
+                    *renforcePoidsEc
+                );            
+        }
+
+        function calculNbEcts(ecs){
             //calcul l'échelle des blocs
-            let ECTS = parseInt(ecsMaq[row].ECTS),
-                blocPoids = d3.flatGroup(poidsDetails, d => d.numBloc).map(b => {
+            ecs.poidsDetails = calculSimilariteBlocEc(ecs);
+            let ECTS = parseInt(ecs.ECTS),
+                blocPoids = d3.flatGroup(ecs.poidsDetails, d => d.numBloc).map(b => {
                     return {
-                        'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2)),
+                        'poids':d3.sum(b[1], s=>renforcePoids(s)),
                         'poidsBloc':d3.sum(b[1], s=>s.simBloc),
                         'poidsEc':d3.sum(b[1], s=>s.simEc),
                         'nbEc':b[1].length,
@@ -233,18 +269,27 @@
                 f = scalePoids.tickFormat(10,"%"),
                 leg = T.map(f),
                 */
-                ecBlocPoids = d3.flatGroup(poidsDetails, d => d.numBloc).map(b => {
+                ecBlocPoids = d3.flatGroup(ecs.poidsDetails, d => d.numBloc).map(b => {
                     let c = {'bloc':b[0],'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2))};
                     c.poidsEcts = scalePoids(c.poids);
-                    c["ects"] = scaleEcts(c.poidsEcts);//f(c.poids);
+                    c.numEcts = scaleEcts(c.poidsEcts);//f(c.poids);
+                    c.ects = 0;
                     return c;
                 });
-            //ordonne le résultat pour calculer le nombre d'ECTS
-            ecBlocPoids = d3.sort(ecBlocPoids, d => d.poidsEcts);
+            if(ecBlocPoids.length){
+                let reste = ECTS;
+                while (reste >= 1) {
+                    //ordonne le résultat pour prendre le plus grand 
+                    ecBlocPoids = ecBlocPoids.sort((a, b) => b.numEcts - a.numEcts);
+                    ecBlocPoids[0].ects += 1;
+                    ecBlocPoids[0].numEcts -= 1;
+                    reste -= 1;
+                }
+            }
             //attribut les ects
-            console.log(extPoids);
-            console.log(ecBlocPoids);
-
+            console.log(ecBlocPoids);            
+            ecs.blocEcts = ecBlocPoids;
+            return ecBlocPoids;
         }
 
         function calculePoids(bloc,ec){
@@ -273,8 +318,7 @@
         async function setSemaCompRome(row=0){
             console.log(row+" : "+ecsMaq[row].LIB);
             ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",ecsMaq[row].LIB);
-            let comp = ecsMaq[row].semaFind;
-            await getSemaCompRome(row,ecsMaq[row].LIB)
+            await getSemaCompRome(ecsMaq[row].code,ecsMaq[row].LIB)
             if(row < ecsMaq.length-1)setSemaCompRome(row+1);
         }
 
@@ -311,9 +355,10 @@
                 search: true,
                 selectionMode: 'single', // 'single', 'range' or 'multiple',
                 afterSelection: (row, column, row2, column2, preventScrolling, selectionLayerLevel) => {
-                    const lib = hotCours.getDataAtCell(row,2);
-                    console.log(lib);
-                    getSemaCompRome(row,lib);
+                    let lib = hotCours.getDataAtCell(row,2),
+                        code = hotCours.getDataAtCell(row,1);
+                    console.log(code+" : "+lib);
+                    getSemaCompRome(code,lib);
                     preventScrolling.value = true;
                 }                        
             }); 

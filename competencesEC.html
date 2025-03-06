@@ -10,6 +10,16 @@
 
     <script src="assets/js/handsontable.full.min.js"></script>
     <script src="assets/js/d3.min.js"></script>
+    <style>
+
+        td {
+            vertical-align: top;
+        }
+        .grid {
+            height:400px;
+            width:300px;
+        }
+    </style>
 </head>
 <body>
     <table border="1" style="width: 100%;">
@@ -18,11 +28,30 @@
             <th>Compétences</th>
         </tr>
         <tr>
-            <td style="vertical-align: top;">
+            <td >
+                <div>
+                    <label for="fileMaquette" class="btn">Charger le maquette</label>
+                    <input type="file" id="fileMaquette" accept=".csv" >
+                </div>
+                <div id="gridMaquette" class="grid"></div>
+            </td>
+            <td >
+                <div>
+                    <label for="fileBlocComp" class="btn">Charger les blocs de compétences</label>
+                    <input type="file" id="fileBlocComp" accept=".csv" >
+                </div>
+                <div id="gridBlocComp"  class="grid"></div>
+            </td>
+        </tr>
+        <tr>
+            <td>
                 <button id="setEcComp">Récupérer les compétences ROME des EC</button>
-                <button id="setEcPoidsBlocComp">Calculer le poids des Bloc de compétences</button>
-                <button id="export-file">ExPORT</button>
-                <div id="gridEcs" style="height:400px;width:300px;"></div>
+                <!--<button id="setEcPoidsBlocComp">Calculer le poids des Bloc de compétences</button>!-->
+                <button id="exportFileCompMaquette">Exporter les compétences de la maquette</button>
+                <div>
+                    <label for="fileCompMaquette" class="btn">Charger les compétences de la maquette</label>
+                    <input type="file" id="fileCompMaquette" accept=".json" >
+                </div>
                 <div>
                     <ul id="ecComp">
                     </ul>    
@@ -35,11 +64,19 @@
                     </tr>
                 </table>                           
                 <button id="getBlocComp">Récupérer les compétences ROME des blocs RNCP</button>
-                <button id="getBlocCompRome">Voir les compétences ROME</button>
-                <ul id="blocsComp">
-                </ul>
+                <!--<button id="getBlocCompRome">Voir les compétences ROME</button>!-->
+                <button id="exportFileCompBloc">Exporter les compétences des blocs</button>
+                <div>
+                    <label for="fileCompBlocComp" class="btn">Charger les compétences des blocs</label>
+                    <input type="file" id="fileCompBlocComp" accept=".json" >
+                </div>
+                <div>
+                    <ul id="blocComp">
+                    </ul>
+                </div>
             </td>
         </tr>
+
     </table>
     
     <script type="module">
@@ -54,32 +91,97 @@
             key:'Jo5RZc9S3qr79GAe2TZk9UBakWcZbP48',
         }),
         sema = new semafor({'omk':a.omk}),
-        ficheRNCP, itemsBloc=[], blocSelect, thBlocs, colorBase="#0080003d", colorSelect="#80002d3d",
+        ficheRNCP, blocsRNCP=[], itemsBloc=[], blocSelect, thBlocs, colorBase="#0080003d", colorSelect="#80002d3d",
         ecsMaq, finCharge=true, renforcePoidsEc=1, renforcePoidsBloc=2, renforcePoidsPositif=2,
         headers = ["parcours","code","LIB","ECTS","verifECTS",
             "BlocComp1","BlocComp2","BlocComp3","BlocComp4","BlocComp5","BlocComp6","BlocComp7","BlocComp8",
             "BlocComp1poids","BlocComp2poids","BlocComp3poids","BlocComp4poids","BlocComp5poids","BlocComp6poids","BlocComp7poids","BlocComp8poids"];
 
+        /*chargement automatique des exemples
+        Promise.all([d3.csv("assets/data/BlocsCompetencesHN.csv"),d3.csv("assets/data/EcACEHN.csv")]).then(values => {
+            ecsMaq = values[1];
+            blocsRNCP = values[0];
+            showGrid("gridMaquette",values[1]);
+            showGrid("gridBlocComp",values[0]);
+            finCharge = true;
+        });
+        */
+            
+        document.querySelector('#fileMaquette').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const contents = e.target.result;
+                    ecsMaq = d3.csvParse(contents);
+                    showGrid("gridMaquette",ecsMaq);
+                };
+                reader.readAsText(file);
+            }
+        });
+        document.querySelector('#fileBlocComp').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const contents = e.target.result;
+                    blocsRNCP = d3.csvParse(contents);
+                    showGrid("gridBlocComp",blocsRNCP);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.querySelector('#fileCompBlocComp').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const contents = e.target.result;
+                    blocsRNCP = JSON.parse(contents);
+                    showGrid("gridBlocComp",blocsRNCP);
+                    getSemaBlocCompRome();
+                };
+                reader.readAsText(file);
+            }
+        });                
+
+        document.querySelector('#fileCompMaquette').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const contents = e.target.result;
+                    ecsMaq = JSON.parse(contents);
+                    showGrid("gridMaquette",ecsMaq);
+                    getSemaECRomeComp();
+                };
+                reader.readAsText(file);
+            }
+        });                
+        
+
         document.querySelector('#getBlocComp').addEventListener('click', () => {
-            if (!blocSelect) {
-                alert('Veuillez choisir un bloc de compétence.');
+            if (!finCharge) {
+                alert('Veuillez attendre le chargement des données.');
                 return;
             }
-            getSemaComp();
+            getSemaBlocCompRome();
+        });
+        document.querySelector('#setEcComp').addEventListener('click', () => {
+            if (!finCharge) {
+                alert('Veuillez attendre le chargement des données.');
+                return;
+            }
+            getSemaECRomeComp();
         });  
+        /*  
         document.querySelector('#getBlocCompRome').addEventListener('click', () => {
             if (!blocSelect) {
                 alert('Veuillez choisir un bloc de compétence.');
                 return;
             }
             getBlocCompRome();
-        });  
-        document.querySelector('#setEcComp').addEventListener('click', () => {
-            if (!finCharge) {
-                alert('Veuillez attendre le chargement des données.');
-                return;
-            }
-            setSemaCompRome();
         });  
         document.querySelector('#setEcPoidsBlocComp').addEventListener('click', () => {
             if (!finCharge) {
@@ -116,6 +218,7 @@
             ecsMaq.push(libBloc)
             showMaquette(headers, ecsMaq);                
         })
+        */
 
         /*Pour la récupération des compétences via semafor  
         d3.csv("assets/refs/listeEC-HNsimple.csv").then(maq=>{
@@ -200,12 +303,15 @@
             }
         }
 
-        async function getSemaCompRome(code,lib){
+        async function showSemaECRomeComp(code,lib){
             let ec = ecsMaq.filter(e=>e.code==code)[0];
             //récupère les compétences pour l'EC 
             ec.semaFind = ec.semaFind ? ec.semaFind : await sema.search("Competences",lib);
-            d3.select("#ecComp").selectAll('li').remove();
-            d3.select("#ecComp").selectAll('li').data( ec.semaFind.search_results).enter().append("li")
+            //ajoute l'EC
+            d3.select("#ecComp").select('#ec'+code).remove();
+            let ulEc = d3.select("#ecComp").append("li").attr('id','ec'+code).html("<b>"+code+"</b> "+lib)
+                .append("ul"); 
+            ulEc.selectAll('li').data( ec.semaFind.search_results).enter().append("li")
                 .attr('id',(d,i)=>'sema'+i)
                 .html(d=>{
                     return "<b>"+d.similarity+"</b> "+d.text;
@@ -221,6 +327,22 @@
                 });
             });             
 
+        }
+
+
+        async function showSemaBlocRomeComp(code,lib){
+            let bloc = blocsRNCP.filter(e=>e.code==code)[0];
+            //récupère les compétences pour l'EC 
+            bloc.semaFind = bloc.semaFind ? bloc.semaFind : await sema.search("Competences",lib);
+            //ajoute l'EC
+            d3.select("#blocComp").select('#bloc'+code).remove();
+            let ulEc = d3.select("#blocComp").append("li").attr('id','bloc'+code).html("<b>"+code+"</b> "+lib)
+                .append("ul"); 
+            ulEc.selectAll('li').data( bloc.semaFind.search_results).enter().append("li")
+                .attr('id',(d,i)=>'sema'+i)
+                .html(d=>{
+                    return "<b>"+d.similarity+"</b> "+d.text;
+                });
         }
 
         function calculSimilariteBlocEc(ec){
@@ -315,21 +437,28 @@
             console.log('test');
         }
 
-        async function setSemaCompRome(row=0){
-            console.log(row+" : "+ecsMaq[row].LIB);
-            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",ecsMaq[row].LIB);
-            await getSemaCompRome(ecsMaq[row].code,ecsMaq[row].LIB)
-            if(row < ecsMaq.length-1)setSemaCompRome(row+1);
+        async function getSemaECRomeComp(row=0){
+            console.log(row+" : "+ecsMaq[row].EC);
+            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",ecsMaq[row].EC);
+            await showSemaECRomeComp(ecsMaq[row].code,ecsMaq[row].EC)
+            if(row < ecsMaq.length-1)getSemaECRomeComp(row+1);
         }
 
+        async function getSemaBlocCompRome(row=0){
+            console.log(row+" : "+blocsRNCP[row]["Compétence associées"]);
+            blocsRNCP[row].semaFind = blocsRNCP[row].semaFind ? blocsRNCP[row].semaFind : await sema.search("Competences",blocsRNCP[row]["Compétence associées"]);
+            await showSemaBlocRomeComp(blocsRNCP[row].code,blocsRNCP[row]["Compétence associées"])
+            if(row < blocsRNCP.length-1)getSemaBlocCompRome(row+1);
+        }        
 
 
         function showFindComp(data){
             console.log(data);
         }
 
-        function showMaquette(headers, rows){
-            let hotCours = new Handsontable(d3.select('#gridEcs').node(), {
+        function showGrid(idCont, rows){
+            let headers = Object.keys(rows[0]), 
+                hotCours = new Handsontable(d3.select('#'+idCont).node(), {
                 className: 'htDark',
                 afterGetColHeader: function(col, TH){
                     TH.className = 'darkTH'
@@ -358,12 +487,13 @@
                     let lib = hotCours.getDataAtCell(row,2),
                         code = hotCours.getDataAtCell(row,1);
                     console.log(code+" : "+lib);
-                    getSemaCompRome(code,lib);
+                    showSemaECRomeComp(code,lib);
                     preventScrolling.value = true;
                 }                        
-            }); 
+            });
+            /* 
             const exportPlugin = hotCours.getPlugin('exportFile');
-            document.querySelector('#export-file').addEventListener('click', () => {
+            document.querySelector('#exportFileCompMaquette').addEventListener('click', () => {
                 exportPlugin.downloadFile('csv', {
                     bom: false,
                     columnDelimiter: ',',
@@ -377,10 +507,8 @@
                     rowHeaders: true,
                 });
             });   
-            
-        }
-
-        
+            */
+        }        
 
         function getCellEditor(cols){
             let editors = [];
@@ -407,6 +535,26 @@
             })
             return editors;
         }
+
+        document.querySelector('#exportFileCompMaquette').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(ecsMaq));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "ecMaq.json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        })
+
+        d3.select('#exportFileCompBloc').on('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(blocsRNCP));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "blocsRNCP.json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        })
 
     </script>
 

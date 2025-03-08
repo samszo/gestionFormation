@@ -15,6 +15,10 @@
         td {
             vertical-align: top;
         }
+        .rGrid {
+            height:200px;
+            overflow: scroll;
+        }
         .grid {
             height:400px;
             width:300px;
@@ -32,6 +36,7 @@
                 <div>
                     <label for="fileMaquette" class="btn">Charger le maquette</label>
                     <input type="file" id="fileMaquette" accept=".csv" >
+                    <button id="exportgridMaquette">Exporter</button>
                 </div>
                 <div id="gridMaquette" class="grid"></div>
             </td>
@@ -39,6 +44,7 @@
                 <div>
                     <label for="fileBlocComp" class="btn">Charger les blocs de compétences</label>
                     <input type="file" id="fileBlocComp" accept=".csv" >
+                    <button id="exportgridBlocComp">Exporter</button>
                 </div>
                 <div id="gridBlocComp"  class="grid"></div>
             </td>
@@ -46,19 +52,18 @@
         <tr>
             <td>
                 <button id="setEcComp">Récupérer les compétences ROME des EC</button>
-                <!--<button id="setEcPoidsBlocComp">Calculer le poids des Bloc de compétences</button>!-->
                 <button id="exportFileCompMaquette">Exporter les compétences de la maquette</button>
                 <div>
                     <label for="fileCompMaquette" class="btn">Charger les compétences de la maquette</label>
                     <input type="file" id="fileCompMaquette" accept=".json" >
                 </div>
-                <div>
+                <div class="rGrid">
                     <ul id="ecComp">
                     </ul>    
                 </div>
 
             </td>
-            <td style="vertical-align: top;">
+            <td >
                 <table border="1">
                     <tr id="blocsTitre">
                     </tr>
@@ -70,10 +75,22 @@
                     <label for="fileCompBlocComp" class="btn">Charger les compétences des blocs</label>
                     <input type="file" id="fileCompBlocComp" accept=".json" >
                 </div>
-                <div>
+                <div class="rGrid">
                     <ul id="blocComp">
                     </ul>
                 </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <button id="setEcPoidsBlocComp">Calculer le poids des Bloc de compétences</button>
+                <button id="exportgridRepatitionECTS">Exporter</button>
+                <div id="gridRepatitionECTS" class="grid"></div>
+            </td>
+            <td>
+                <button id="setMatriceFormation">Calculer la matrice de la formation</button>
+                <button id="exportgridMatriceFormation">Exporter</button>
+                <div id="gridMatriceFormation" class="grid"></div>
             </td>
         </tr>
 
@@ -170,11 +187,26 @@
         });
         document.querySelector('#setEcComp').addEventListener('click', () => {
             if (!finCharge) {
-                alert('Veuillez attendre le chargement des données.');
+                alert('Veuillez calculer les données pour la maquette et les blocs.');
                 return;
             }
             getSemaECRomeComp();
         });  
+        document.querySelector('#setEcPoidsBlocComp').addEventListener('click', () => {
+            if (ecsMaq.length==0 || blocsRNCP.length==0) {
+                alert('Veuillez attendre le chargement des données.');
+                return;
+            }
+            showRepartitionComp();
+        });
+        document.querySelector('#setMatriceFormation').addEventListener('click', () => {
+            if (ecsMaq.length==0 || blocsRNCP.length==0) {
+                alert('Veuillez attendre le chargement des données.');
+                return;
+            }
+            showMatriceFormation();
+        });
+        
         /*  
         document.querySelector('#getBlocCompRome').addEventListener('click', () => {
             if (!blocSelect) {
@@ -183,13 +215,6 @@
             }
             getBlocCompRome();
         });  
-        document.querySelector('#setEcPoidsBlocComp').addEventListener('click', () => {
-            if (!finCharge) {
-                alert('Veuillez attendre le chargement des données.');
-                return;
-            }
-            calculePoidsBlocComp();
-        });
         //pour le calcule automatique après sauvegarde des objets ecsMaq et itemsBloc
         Promise.all([d3.json("assets/refs/blocComp.json"),d3.json("assets/refs/ecsMaqComp.json")]).then(values => {
             ecsMaq=values[1];
@@ -312,18 +337,19 @@
             let ulEc = d3.select("#ecComp").append("li").attr('id','ec'+code).html("<b>"+code+"</b> "+lib)
                 .append("ul"); 
             ulEc.selectAll('li').data( ec.semaFind.search_results).enter().append("li")
-                .attr('id',(d,i)=>'sema'+i)
+                .attr('id',(d,i)=>code+'sema'+d.data.code_ogr)
                 .html(d=>{
                     return "<b>"+d.similarity+"</b> "+d.text;
                 });
             //recalcul les poids
             calculNbEcts(ec);
             //affiche le détails par compétence d'EC
-            let cpEcComp = d3.group(ec.poidsDetails, d => d.i, d => d.titreBloc);
-            cpEcComp.forEach((ec,i) => {
-                let ul = d3.select('#sema'+i).append("ul");
-                ul.selectAll('li').data(ec).enter().append("li").html(d=>{
-                    return "<b>"+d3.sum(d[1], s=>s.simBloc)+"</b> Bloc "+d[1][0].numBloc;//+" : "+d[0];
+            let cpEcComp = d3.group(ec.poidsDetails, d => d.code, d => d.idBloc);
+            cpEcComp.forEach((ecComp,code_ogr) => {
+                let idUl = code+'sema'+code_ogr,
+                    ul = d3.select('#'+idUl).append("ul");
+                ul.selectAll('li').data(ecComp).enter().append("li").html(d=>{
+                    return "<b>"+d3.sum(d[1], s=>s.simBloc)+"</b> Bloc "+d[1][0].idBloc;//+" : "+d[0];
                 });
             });             
 
@@ -348,7 +374,14 @@
         function calculSimilariteBlocEc(ec){
             //calcul la similarité avec les blocs
             let poidsDetails = [];
+            /*version OMK
             itemsBloc.forEach((ib,i)=>{
+                let cp = calculePoids(ib,ec);
+                cp.details.forEach(d=>d.numBloc=i+1);
+                poidsDetails = poidsDetails.concat(cp.details);
+            })
+            */
+            blocsRNCP.forEach((ib,i)=>{
                 let cp = calculePoids(ib,ec);
                 cp.details.forEach(d=>d.numBloc=i+1);
                 poidsDetails = poidsDetails.concat(cp.details);
@@ -392,7 +425,7 @@
                 leg = T.map(f),
                 */
                 ecBlocPoids = d3.flatGroup(ecs.poidsDetails, d => d.numBloc).map(b => {
-                    let c = {'bloc':b[0],'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2))};
+                    let c = {'bloc':b[0],'idBloc':b[1][0].idBloc,'poids':d3.sum(b[1], s=>s.simBloc+(s.simEc*2))};
                     c.poidsEcts = scalePoids(c.poids);
                     c.numEcts = scaleEcts(c.poidsEcts);//f(c.poids);
                     c.ects = 0;
@@ -416,6 +449,7 @@
 
         function calculePoids(bloc,ec){
             let poids = 0, details=[];
+            /*version OMK
             bloc.romeComp.forEach(rc=>{
                 rc["rome:hasCompetence"].forEach(hc=>{
                     let romeComp = hc,
@@ -430,6 +464,19 @@
                     })
                 })
             })
+            */
+            bloc.semaFind.search_results.forEach((rc,j)=>{
+                let sim =  rc.similarity,
+                    code = rc.data.code_ogr;
+                ec.semaFind.search_results.forEach((sr,i)=>{
+                    let result = "";
+                    if(sr.data.code_ogr==code){
+                        details.push({'idBloc':bloc.code.split('-')[0],'idCompAsso':bloc.code,'Bloc de Compétence':bloc["Bloc de Compétence"],'Compétence associées':bloc["Compétence associées"],'i':i,'type':sr.data.item_type,'code':code,'titre':sr.data.titre,'simBloc':sim,'simEc':parseFloat(sr.similarity)})
+                        poids+=sim+parseFloat(sr.similarity);
+                    }
+                })
+            })
+
             return {"poids":poids,"details":details};
         }
 
@@ -446,11 +493,62 @@
 
         async function getSemaBlocCompRome(row=0){
             console.log(row+" : "+blocsRNCP[row]["Compétence associées"]);
-            blocsRNCP[row].semaFind = blocsRNCP[row].semaFind ? blocsRNCP[row].semaFind : await sema.search("Competences",blocsRNCP[row]["Compétence associées"]);
+            blocsRNCP[row].semaFind = blocsRNCP[row].semaFind ? blocsRNCP[row].semaFind 
+                : await sema.search("Competences",blocsRNCP[row]["Bloc de compétence"]+" "+blocsRNCP[row]["Compétence associées"]);
+                //: await sema.search("Competences",blocsRNCP[row]["Compétence associées"]);
             await showSemaBlocRomeComp(blocsRNCP[row].code,blocsRNCP[row]["Compétence associées"])
             if(row < blocsRNCP.length-1)getSemaBlocCompRome(row+1);
         }        
 
+        function showRepartitionComp(){
+            /*
+            Blocs de compétences de la fiche n°38207	Intitulé des compétences associées au  bloc de compétences 	Intitulé des compétences associées au bloc de compétences définis par l'équipe pédagogique	" Objectifs d'apprentissage visés
+(Contributions à l'acquisition des compétences)"	"UE
+(n° et intitulé)"	"EC 
+(n° et intitulé)"	Critères et modalités d'évaluation	ECTS	HCM	HTD
+            */
+            //ajoute les colonnes de bloc compétences
+            let rs = [], rsBloc = d3.group(blocsRNCP, d => d.code.split("-")[0]);            
+            ecsMaq.forEach((e,j)=>{
+                let r = JSON.parse(JSON.stringify(e));
+                r["ECTS"] = parseInt(r["ECTS"]);
+                r.verifECTS=0;
+                delete r["blocEcts"];
+                delete r["semaFind"];
+                delete r["poidsDetails"];
+                rsBloc.forEach((b,i) => {
+                    r[i]=0;
+                    //r[i+" poids"]=0;
+                    
+                })
+                e.blocEcts.forEach((bloc,i)=>{
+                    r[bloc.idBloc]= bloc.ects;
+                    //r[bloc.idBloc+" poids"]= bloc.poids;
+                    r.verifECTS += bloc.ects;
+                })
+                r.verifECTS -= r["ECTS"];
+                rs.push(r);
+            })
+            
+            showGrid("gridRepatitionECTS", rs);
+        }
+
+        function showMatriceFormation(){
+
+            let headers = ["Blocs de compétences","Intitulé des compétences associées","Intitulé des compétences définis par l'équipe pédagogique","Objectifs d'apprentissage","UE","EC","Critères et modalités d'évaluation","ECTS","HCM","HTD"],
+                rs = [], rsBloc = d3.group(blocsRNCP, d => d.code.split("-")[0]);
+            //applati les données            
+            ecsMaq.forEach((e,j)=>{
+                e.poidsDetails.forEach(poids=>{
+                    let r = {'EC':e.EC};
+                    r.idCompAsso = poids.idCompAsso;
+                    r.compCode = poids.code;
+                    r.compTitre = poids.titre;
+                    rs.push(r);
+                })
+            })            
+            showGrid("gridMatriceFormation", rs);
+        }        
 
         function showFindComp(data){
             console.log(data);
@@ -491,9 +589,8 @@
                     preventScrolling.value = true;
                 }                        
             });
-            /* 
             const exportPlugin = hotCours.getPlugin('exportFile');
-            document.querySelector('#exportFileCompMaquette').addEventListener('click', () => {
+            document.querySelector('#export'+idCont).addEventListener('click', () => {
                 exportPlugin.downloadFile('csv', {
                     bom: false,
                     columnDelimiter: ',',
@@ -501,13 +598,12 @@
                     exportHiddenColumns: true,
                     exportHiddenRows: true,
                     fileExtension: 'csv',
-                    filename: 'EcBlocCompetence_[YYYY]-[MM]-[DD]',
+                    filename: idCont+'_[YYYY]-[MM]-[DD]',
                     mimeType: 'text/csv',
                     rowDelimiter: '\r\n',
                     rowHeaders: true,
                 });
             });   
-            */
         }        
 
         function getCellEditor(cols){

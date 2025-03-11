@@ -81,16 +81,17 @@
 
         // Fonction pour récupérer les données de l'API France Travail
         async function fetchJobLocations() {
-            //pour les tests 
+            /*pour les tests 
             d3.json("assets/data/testEmplois.json").then(data=>{
                 displayJobsOnMap(data);
             })
-            /*récupère les métiers et ou les appellations
+            */
+            //récupère les métiers et ou les appellations
             let codes = await getCodeRome(); 
             token = await getFranceTravailToken();
             jobs=[];
             queryAllFranceTravail(codes, 0);
-            */
+            //
         }
 
         function queryAllFranceTravail(codes, num=0){

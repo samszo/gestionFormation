@@ -58,7 +58,8 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
 // Définir les options cURL
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
+//curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+//curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 // Exécuter la session cURL
 $response = curl_exec($ch);
 

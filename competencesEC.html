@@ -20,7 +20,7 @@
             overflow: scroll;
         }
         .grid {
-            height:400px;
+            height:300px;
             width:300px;
         }
     </style>
@@ -89,16 +89,41 @@
             </td>
             <td>
                 <button id="setMatriceFormation">Calculer la matrice de la formation</button>
+<<<<<<< HEAD
                 <button id="exportgridMatriceFormation">Exporter</button>
                 <div id="gridMatriceFormation" class="grid"></div>
             </td>
         </tr>
 
+=======
+                <button id="exportgridMatriceFormation">Exporter le tableau</button>
+                <button id="exportMatriceFormation">Exporter la matrice</button>
+                <div>
+                    <label for="fileMatriceFormation" class="btn">Charger la matrice</label>
+                    <input type="file" id="fileMatriceFormation" accept=".json" >
+                </div>
+                <div id="gridMatriceFormation" class="grid"></div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <button id="setProfilApprenant">Calculer le profil de l'apprenant</button>
+                <button id="exportgridProfilApprenant">Exporter le tableau</button>
+                <button id="exportProfilApprenant">Exporter le profil</button>
+                <div>
+                    <label for="fileProfilApprenant" class="btn">Charger le profil</label>
+                    <input type="file" id="fileProfilApprenant" accept=".json" >
+                </div>
+                <div id="gridProfilApprenant" class="grid"></div>
+            </td>
+        </tr>
+>>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
     </table>
     
     <script type="module">
         import {auth} from './modules/auth.js';
         import {semafor} from './modules/semafor.js';
+        import {francetravail} from './modules/francetravail.js';
 
         let a = new auth({
             mail:'acehn@univ-paris8.fr',
@@ -108,11 +133,13 @@
             key:'Jo5RZc9S3qr79GAe2TZk9UBakWcZbP48',
         }),
         sema = new semafor({'omk':a.omk}),
+        ft = new francetravail(),
         ficheRNCP, blocsRNCP=[], itemsBloc=[], blocSelect, thBlocs, colorBase="#0080003d", colorSelect="#80002d3d",
         ecsMaq, finCharge=true, renforcePoidsEc=1, renforcePoidsBloc=2, renforcePoidsPositif=2,
         headers = ["parcours","code","LIB","ECTS","verifECTS",
             "BlocComp1","BlocComp2","BlocComp3","BlocComp4","BlocComp5","BlocComp6","BlocComp7","BlocComp8",
-            "BlocComp1poids","BlocComp2poids","BlocComp3poids","BlocComp4poids","BlocComp5poids","BlocComp6poids","BlocComp7poids","BlocComp8poids"];
+            "BlocComp1poids","BlocComp2poids","BlocComp3poids","BlocComp4poids","BlocComp5poids","BlocComp6poids","BlocComp7poids","BlocComp8poids"],
+        compDetails=[],poidsDetails=[],metiersDetails=[],profilApprenant=[];
 
         /*chargement automatique des exemples
         Promise.all([d3.csv("assets/data/BlocsCompetencesHN.csv"),d3.csv("assets/data/EcACEHN.csv")]).then(values => {
@@ -175,8 +202,7 @@
                 };
                 reader.readAsText(file);
             }
-        });                
-        
+        });                                
 
         document.querySelector('#getBlocComp').addEventListener('click', () => {
             if (!finCharge) {
@@ -204,9 +230,66 @@
                 alert('Veuillez attendre le chargement des données.');
                 return;
             }
+<<<<<<< HEAD
             showMatriceFormation();
         });
         
+=======
+            calculMatriceFormation();
+        });
+        
+        document.querySelector('#fileMatriceFormation').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const contents = JSON.parse(e.target.result);
+                    blocsRNCP = contents.blocsRNCP;
+                    showGrid("gridBlocComp",blocsRNCP);
+                    getSemaBlocCompRome();
+                    ecsMaq = contents.ecsMaq;
+                    showGrid("gridMaquette",ecsMaq);
+                    getSemaECRomeComp();
+                    poidsDetails = contents.poidsDetails;
+                    compDetails =  contents.compDetails;              
+                    showMatriceFormation();
+                };
+                reader.readAsText(file);
+            }
+        });        
+
+        document.querySelector('#setProfilApprenant').addEventListener('click', () => {
+            if (ecsMaq.length==0 || blocsRNCP.length==0  || poidsDetails.length==0 ) {
+                alert('Veuillez charger les données nécessaires.');
+                return;
+            }
+            metiersDetails = [];
+            getMetierFromComp();
+        });
+        
+        document.querySelector('#fileProfilApprenant').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const contents = JSON.parse(e.target.result);
+                    blocsRNCP = contents.blocsRNCP;
+                    showGrid("gridBlocComp",blocsRNCP);
+                    getSemaBlocCompRome();
+                    ecsMaq = contents.ecsMaq;
+                    showGrid("gridMaquette",ecsMaq);
+                    getSemaECRomeComp();
+                    poidsDetails = contents.poidsDetails;
+                    compDetails =  contents.compDetails;              
+                    showMatriceFormation();
+                    metiersDetails =  contents.metiersDetails;              
+                    calculProfilApprenant();
+                };
+                reader.readAsText(file);
+            }
+        });        
+
+>>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
         /*  
         document.querySelector('#getBlocCompRome').addEventListener('click', () => {
             if (!blocSelect) {
@@ -486,7 +569,7 @@
 
         async function getSemaECRomeComp(row=0){
             console.log(row+" : "+ecsMaq[row].EC);
-            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",ecsMaq[row].EC);
+            ecsMaq[row].semaFind = ecsMaq[row].semaFind ? ecsMaq[row].semaFind : await sema.search("Competences",ecsMaq[row].UE+" "+ecsMaq[row].EC,20);
             await showSemaECRomeComp(ecsMaq[row].code,ecsMaq[row].EC)
             if(row < ecsMaq.length-1)getSemaECRomeComp(row+1);
         }
@@ -494,7 +577,11 @@
         async function getSemaBlocCompRome(row=0){
             console.log(row+" : "+blocsRNCP[row]["Compétence associées"]);
             blocsRNCP[row].semaFind = blocsRNCP[row].semaFind ? blocsRNCP[row].semaFind 
+<<<<<<< HEAD
                 : await sema.search("Competences",blocsRNCP[row]["Bloc de compétence"]+" "+blocsRNCP[row]["Compétence associées"]);
+=======
+                : await sema.search("Competences",blocsRNCP[row]["Bloc de Compétence"]+" "+blocsRNCP[row]["Compétence associées"],20);
+>>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
                 //: await sema.search("Competences",blocsRNCP[row]["Compétence associées"]);
             await showSemaBlocRomeComp(blocsRNCP[row].code,blocsRNCP[row]["Compétence associées"])
             if(row < blocsRNCP.length-1)getSemaBlocCompRome(row+1);
@@ -534,21 +621,179 @@
         }
 
         function showMatriceFormation(){
+<<<<<<< HEAD
 
             let headers = ["Blocs de compétences","Intitulé des compétences associées","Intitulé des compétences définis par l'équipe pédagogique","Objectifs d'apprentissage","UE","EC","Critères et modalités d'évaluation","ECTS","HCM","HTD"],
                 rs = [], rsBloc = d3.group(blocsRNCP, d => d.code.split("-")[0]);
             //applati les données            
+=======
+            console.log(compDetails);
+            console.log(poidsDetails);
+            let headers = ["Blocs de compétences","Intitulé des compétences associées","Intitulé des compétences définis par l'équipe pédagogique","Objectifs d'apprentissage","UE","EC","Critères et modalités d'évaluation","ECTS","HCM","HTD"],
+                rs = [], rsBloc = d3.group(blocsRNCP, d => d.code.split("-")[0]);
+            rsBloc.forEach((b,i) => {
+                let l1 = true;
+                b.forEach((bloc,j)=>{
+                    //récupère les compétences ROME pour les compétences associées RCNP
+                    let filterComp = poidsDetails.filter(pd=>pd.idCompAsso==bloc.code);
+                    filterComp.forEach((comp,j)=>{
+                        let r = {};
+                        headers.forEach(h=>r[h]=" ");
+                        if(l1)r["Blocs de compétences"] = bloc["Bloc de Compétence"];
+                        if(j==0)r["Intitulé des compétences associées"] = bloc["Compétence associées"];
+                        r["Intitulé des compétences définis par l'équipe pédagogique"] = comp.compTitre;
+                        //récupère la compétence détaillée
+                        let cd = compDetails.filter(cd=>cd.code==comp.compCode)[0];
+                        if(cd.macroCompetence)
+                            r["Objectifs d'apprentissage"] = cd.macroCompetence.objectif.libelle;                        
+                        else
+                            r["Objectifs d'apprentissage"] = cd.objectif.libelle;
+                        //récupère les détails de l'EC
+                        let ec = ecsMaq.filter(ec=>ec.EC==comp.EC)[0];
+                        r.UE = ec.UE;
+                        r.EC = ec.EC;
+                        r["Critères et modalités d'évaluation"] = "projet";
+                        r.ECTS = ec.ECTS
+                        r.HCM = 30;
+                        r.HTD = 30;
+                        rs.push(r);
+                        l1 = false;
+                    })
+                })
+            })
+            showGrid("gridMatriceFormation", rs);
+        }
+        
+        function calculMatriceFormation(){
+
+            //applatie les données
+            let oComp={};
+            poidsDetails=[];            
+>>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
             ecsMaq.forEach((e,j)=>{
                 e.poidsDetails.forEach(poids=>{
                     let r = {'EC':e.EC};
                     r.idCompAsso = poids.idCompAsso;
                     r.compCode = poids.code;
                     r.compTitre = poids.titre;
+<<<<<<< HEAD
                     rs.push(r);
                 })
             })            
             showGrid("gridMatriceFormation", rs);
         }        
+=======
+                    oComp[poids.code] = poids.titre;
+                    poidsDetails.push(r);
+                })
+            })
+            compDetails = Object.keys(oComp);
+            //récupère le détail des compétences
+            getAllCompDetails();
+
+        }        
+
+        async function getAllCompDetails(row=0){
+            console.log(row+" : "+compDetails[row]);
+            compDetails[row] = await ft.search("competence",compDetails[row]);
+            if(row < compDetails.length-1)getAllCompDetails(row+1)
+            else showMatriceFormation();
+        }
+
+        async function getMetierFromComp(row=0){
+
+            //récupère les métiers associés aux compétences de la matrice
+            console.log(row+" : "+compDetails[row]);
+            metiersDetails.push(await ft.search("appellation",compDetails[row].libelle));
+            if(row < compDetails.length-1)getMetierFromComp(row+1);
+            else {
+                //regroupe les métiers
+                let flatMetiers = [];
+                metiersDetails.forEach((m,i)=>{
+                    m.resultats.forEach((r,j)=>{
+                        flatMetiers.push({'code':r.code,'compCode':compDetails[i].code});
+                    })
+                })
+                metiersDetails = Array.from(d3.group(flatMetiers, d => d.code)).map(m=>{return {'code':m[0],'comp':m[1].map(c=>c.compCode)}});
+                console.log(metiersDetails);
+                getDetailsMetier();
+            }
+        }        
+
+        async function getDetailsMetier(row=0){
+            //récupère les métiers associés aux compétences de la matrice
+            console.log(row+" : "+metiersDetails[row]);
+            metiersDetails[row].details = metiersDetails[row].details ? metiersDetails[row].details : await ft.get("appellation",metiersDetails[row].code);
+            if(row < metiersDetails.length-1)getDetailsMetier(row+1);
+            else getOffresMetiers();
+        }        
+
+        async function getOffresMetiers(row=0){
+            //récupère les métiers associés aux compétences de la matrice
+            console.log(row+" : "+metiersDetails[row]);
+            //recherche les offre pour l'appellation et le niveau niveauFormation Bac+3, Bac+4 ou équivalents =NV2
+            metiersDetails[row].offres = metiersDetails[row].offres ? metiersDetails[row].offres : await ft.search("offres","appellation="+metiersDetails[row].code+"&niveauFormation=NV2");
+            if(row < metiersDetails.length-1)getOffresMetiers(row+1);
+            else calculProfilApprenant();
+        }        
+
+        function calculProfilApprenant(){
+            let offres = [], dbOffres=[], comp=[], offresMaquette=[],
+                headers = ["Fiches Rome","Métier(s)","Missions","Activités","Compétences"],
+                exigence = {"E":"exigée","S":"souhaitée"};
+            //met à plat les offres
+            metiersDetails.forEach(m=>{
+                if(m.offres.resultats)
+                    m.offres.resultats.forEach(r=>{
+                        if(!dbOffres[r.id]){
+                            dbOffres[r.id] = r;
+                            offres.push(r);
+                        }
+                    });   
+            });
+            //récupère les offres en lien avec les compétences de la maquette
+            offres.forEach(o=>{
+                if(o.competences){
+                    o.competences.forEach(c=>{
+                        if(c.code){
+                            let cm = compDetails.filter(cd=>cd.code==c.code);
+                            if(cm.length)offresMaquette.push({'o':o,'c':cm[0]});
+                        }                    
+                    });
+                }
+            });
+            //récupère les offres regroupées par métiers
+            let mao = d3.group(offresMaquette, om=> om.o.romeCode, om=>om.o.codeNAF, om => om.o.id);
+            mao.forEach(omm=>{
+                let r1=true;
+                omm.forEach(app=>{
+                    let m1=true;
+                    app.forEach(om=>{
+                        let o1=true;
+                        om.forEach(o=>{
+                            o.competences.forEach(c=>{
+                                let pa = {};
+                                headers.forEach(h=>pa[h]="");
+                                if(r1){
+                                    pa["Fiches Rome"] = om.o.romeCode+" "+om.o.romeLibelle;
+                                    r1=false;
+                                }
+                                if(m1){
+                                    pa["Métier(s)"] = om.o["intitule"]+" "+om.o.id;
+                                    m1=false;
+                                    pa["Missions"]=om.o.description;
+                                    pa["Activités"]=om.o.qualitesProfessionnelles ? om.o.qualitesProfessionnelles.map(qp=>qp.libelle).join(", ") : " ";
+                                }
+                                pa["Compétences"]=c.code+" "+c.libelle+" "+exigence["c.exigence"];                        
+                                profilApprenant.push(pa);
+                            })
+                        })    
+                    })
+                })    
+            })
+            showGrid("gridProfilApprenant", profilApprenant);
+        }
+>>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
 
         function showFindComp(data){
             console.log(data);
@@ -651,6 +896,29 @@
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
         })
+
+        d3.select('#exportMatriceFormation').on('click', () => {
+            let data = {'compDetails':compDetails,'blocsRNCP':blocsRNCP,'ecsMaq':ecsMaq,'poidsDetails':poidsDetails};
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "matriceFormation.json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        })
+
+        d3.select('#exportProfilApprenant').on('click', () => {
+            let data = {'compDetails':compDetails,'blocsRNCP':blocsRNCP,'ecsMaq':ecsMaq,'poidsDetails':poidsDetails,'metiersDetails':metiersDetails,'profilApprenant':profilApprenant};
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "profilApprenant.json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        })
+        
 
     </script>
 

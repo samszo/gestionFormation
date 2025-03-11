@@ -89,13 +89,6 @@
             </td>
             <td>
                 <button id="setMatriceFormation">Calculer la matrice de la formation</button>
-<<<<<<< HEAD
-                <button id="exportgridMatriceFormation">Exporter</button>
-                <div id="gridMatriceFormation" class="grid"></div>
-            </td>
-        </tr>
-
-=======
                 <button id="exportgridMatriceFormation">Exporter le tableau</button>
                 <button id="exportMatriceFormation">Exporter la matrice</button>
                 <div>
@@ -117,7 +110,6 @@
                 <div id="gridProfilApprenant" class="grid"></div>
             </td>
         </tr>
->>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
     </table>
     
     <script type="module">
@@ -230,11 +222,6 @@
                 alert('Veuillez attendre le chargement des données.');
                 return;
             }
-<<<<<<< HEAD
-            showMatriceFormation();
-        });
-        
-=======
             calculMatriceFormation();
         });
         
@@ -287,9 +274,8 @@
                 };
                 reader.readAsText(file);
             }
-        });        
-
->>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
+        });  
+        
         /*  
         document.querySelector('#getBlocCompRome').addEventListener('click', () => {
             if (!blocSelect) {
@@ -577,11 +563,7 @@
         async function getSemaBlocCompRome(row=0){
             console.log(row+" : "+blocsRNCP[row]["Compétence associées"]);
             blocsRNCP[row].semaFind = blocsRNCP[row].semaFind ? blocsRNCP[row].semaFind 
-<<<<<<< HEAD
-                : await sema.search("Competences",blocsRNCP[row]["Bloc de compétence"]+" "+blocsRNCP[row]["Compétence associées"]);
-=======
                 : await sema.search("Competences",blocsRNCP[row]["Bloc de Compétence"]+" "+blocsRNCP[row]["Compétence associées"],20);
->>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
                 //: await sema.search("Competences",blocsRNCP[row]["Compétence associées"]);
             await showSemaBlocRomeComp(blocsRNCP[row].code,blocsRNCP[row]["Compétence associées"])
             if(row < blocsRNCP.length-1)getSemaBlocCompRome(row+1);
@@ -621,12 +603,6 @@
         }
 
         function showMatriceFormation(){
-<<<<<<< HEAD
-
-            let headers = ["Blocs de compétences","Intitulé des compétences associées","Intitulé des compétences définis par l'équipe pédagogique","Objectifs d'apprentissage","UE","EC","Critères et modalités d'évaluation","ECTS","HCM","HTD"],
-                rs = [], rsBloc = d3.group(blocsRNCP, d => d.code.split("-")[0]);
-            //applati les données            
-=======
             console.log(compDetails);
             console.log(poidsDetails);
             let headers = ["Blocs de compétences","Intitulé des compétences associées","Intitulé des compétences définis par l'équipe pédagogique","Objectifs d'apprentissage","UE","EC","Critères et modalités d'évaluation","ECTS","HCM","HTD"],
@@ -669,20 +645,12 @@
             //applatie les données
             let oComp={};
             poidsDetails=[];            
->>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
             ecsMaq.forEach((e,j)=>{
                 e.poidsDetails.forEach(poids=>{
                     let r = {'EC':e.EC};
                     r.idCompAsso = poids.idCompAsso;
                     r.compCode = poids.code;
                     r.compTitre = poids.titre;
-<<<<<<< HEAD
-                    rs.push(r);
-                })
-            })            
-            showGrid("gridMatriceFormation", rs);
-        }        
-=======
                     oComp[poids.code] = poids.titre;
                     poidsDetails.push(r);
                 })
@@ -793,7 +761,6 @@
             })
             showGrid("gridProfilApprenant", profilApprenant);
         }
->>>>>>> 59bf4fb (Ajout de fichiers CSV pour les parcours et les blocs de compétences, incluant les ECTS et les compétences associées.)
 
         function showFindComp(data){
             console.log(data);

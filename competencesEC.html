@@ -731,31 +731,29 @@
                 }
             });
             //récupère les offres regroupées par métiers
-            let mao = d3.group(offresMaquette, om=> om.o.romeCode, om=>om.o.codeNAF, om => om.o.id);
+            let mao = d3.group(offresMaquette, om=> om.o.romeCode, om=>om.o.codeNAF);
             mao.forEach(omm=>{
                 let r1=true;
                 omm.forEach(app=>{
                     let m1=true;
                     app.forEach(om=>{
                         let o1=true;
-                        om.forEach(o=>{
-                            o.competences.forEach(c=>{
-                                let pa = {};
-                                headers.forEach(h=>pa[h]="");
-                                if(r1){
-                                    pa["Fiches Rome"] = om.o.romeCode+" "+om.o.romeLibelle;
-                                    r1=false;
-                                }
-                                if(m1){
-                                    pa["Métier(s)"] = om.o["intitule"]+" "+om.o.id;
-                                    m1=false;
-                                    pa["Missions"]=om.o.description;
-                                    pa["Activités"]=om.o.qualitesProfessionnelles ? om.o.qualitesProfessionnelles.map(qp=>qp.libelle).join(", ") : " ";
-                                }
-                                pa["Compétences"]=c.code+" "+c.libelle+" "+exigence["c.exigence"];                        
-                                profilApprenant.push(pa);
-                            })
-                        })    
+                        om.o.competences.forEach(c=>{
+                            let pa = {};
+                            headers.forEach(h=>pa[h]="");
+                            if(r1){
+                                pa["Fiches Rome"] = om.o.romeCode+" "+om.o.romeLibelle;
+                                r1=false;
+                            }
+                            if(m1){
+                                pa["Métier(s)"] = om.o["intitule"]+" "+om.o.id;
+                                m1=false;
+                                pa["Missions"]=om.o.description;
+                                pa["Activités"]=om.o.qualitesProfessionnelles ? om.o.qualitesProfessionnelles.map(qp=>qp.libelle).join(", ") : " ";
+                            }
+                            pa["Compétences"]=c.code+" "+c.libelle+" "+exigence["c.exigence"];                        
+                            profilApprenant.push(pa);
+                        })
                     })
                 })    
             })

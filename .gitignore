@@ -11,3 +11,15 @@ assets/refs/profilApprenant.json
 tokenFT.txt
 assets/refs/.~lock.EcACEHN.csv#
 assets/refs/.~lock.EcDTDM.csv#
+assets/refs/matriceFormationDTDM.json
+assets/refs/matriceFormationMCI.json
+assets/refs/gridMatriceFormation_DTDM.csv
+.gitignore
+assets/refs/gridProfilApprenant_DTDM.csv
+assets/refs/gridMatriceFormation_MCI.csv
+assets/refs/gridMatriceFormationMCI_2025-03-14.csv
+assets/refs/gridProfilApprenantMCI_2025-03-14.csv
+assets/refs/gridRepartitionECTS-DTDM_2025-03-15.csv
+.gitignore
+assets/refs/gridRepartitionECTS-MCI_2025-03-14.csv
+assets/refs/gridRepartitionECTS-MCI_2025-03-15.csv

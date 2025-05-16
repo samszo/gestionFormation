@@ -84,8 +84,8 @@
         <tr>
             <td>
                 <button id="setEcPoidsBlocComp">Calculer le poids des Bloc de compétences</button>
-                <button id="exportgridRepatitionECTS">Exporter</button>
-                <div id="gridRepatitionECTS" class="grid"></div>
+                <button id="exportgridRepartitionECTS">Exporter</button>
+                <div id="gridRepartitionECTS" class="grid"></div>
             </td>
             <td>
                 <button id="setMatriceFormation">Calculer la matrice de la formation</button>
@@ -591,7 +591,7 @@
                     
                 })
                 e.blocEcts.forEach((bloc,i)=>{
-                    r[bloc.idBloc]= bloc.ects;
+                    r[bloc.idBloc] += bloc.ects;
                     //r[bloc.idBloc+" poids"]= bloc.poids;
                     r.verifECTS += bloc.ects;
                 })
@@ -599,7 +599,7 @@
                 rs.push(r);
             })
             
-            showGrid("gridRepatitionECTS", rs);
+            showGrid("gridRepartitionECTS", rs);
         }
 
         function showMatriceFormation(){

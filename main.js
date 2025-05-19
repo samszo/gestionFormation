@@ -3,7 +3,8 @@ import {appUrl} from './modules/appUrl.js';
 import {modal} from './modules/modal.js';
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 import {loader} from './modules/loader.js';
-import {keys} from '.modules/keys.js';
+import {keys} from './modules/keys.js';
+keys.fctAuthOK=[loadCalendars,loadParcours];
 
 
 //Omeka parameters
@@ -450,6 +451,7 @@ function getCellEditor(headers){
             }
         })
     })
+    //
   }
 
   async function showEvent(e,d){

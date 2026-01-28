@@ -230,16 +230,21 @@ export class omk {
             return rs;
         }
 
-        this.getUser = function (cb=false){
-            let url = me.api+'users?email='+me.mail+'&key_identity='+me.ident+'&key_credential='+me.key;                
+        this.getUser = function (cb=false, email=false){
+            let url = me.api+'users?email='+(email ? email : me.mail)+'&key_identity='+me.ident+'&key_credential='+me.key;                
             d3.json(url).then((data) => {
                 me.user = data.length ? data[0] : false;
                 //TODO: mieux gérer anythingLLM Login
                 me.user.anythingLLM = me.anythingLLM ? syncRequest(me.api.replace('api/','s/cours-bnf/page/ajax?json=1&helper=anythingLLMlogin')) : false;
                 if(cb)cb(me.user);
             });
-
         }
+        this.getUserRessources = function (ownerId, cb, types=['items','item_sets','media','sites']){
+            Promise.all(types.map(t=>d3.json(me.api+t+'?owner_id='+ownerId))).then((values) => {
+                cb(types,values);
+            });
+        }
+
 
         this.createItem = async function (data, cb=false, verifDoublons){
             if(verifDoublons){

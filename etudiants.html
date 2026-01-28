@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Étudiants</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .student-card { transition: transform 0.2s; }
+        .student-card:hover { transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        #chart { margin-top: 20px; }
+        .filter-section { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">📚 Gestion des Étudiants</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+        <ul class="navbar-nav">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Promotions
+                </a>
+                <ul class="dropdown-menu" id="lstPromos">
+                </ul>
+            </li>
+        </ul>
+        </div>
+    </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-2">
+                <h4>Liste des Étudiants</h4>
+                <ul id="studentsList" class="list-group" ></ul>
+            </div>
+            <div class="col-md-8">
+                <h4>Statistiques</h4>
+                <div id="chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="csvFile" accept=".csv" style="display:none;">
+
+    <script type="module">
+        import {auth} from './modules/auth.js';
+        import {appUrl} from './modules/appUrl.js';
+        import {modal} from './modules/modal.js';
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        import {loader} from './modules/loader.js';
+        import {keys} from './modules/keys.js';
+        keys.fctAuthOK=[loadEtus];
+        keys.gCLIENT_ID=false;
+
+        //chargement des promotions
+        d3.select("#lstPromos").selectAll('li').data(keys.promotions).enter().append('li')
+            .append('a').attr("class","dropdown-item").attr("href","#").html(d=>d.lib).on("click",loadEtus);
+
+        //Omeka parameters
+        let ldr = new loader();
+        ldr.show();
+        let aUrl = new appUrl({'url':new URL(document.location)}),
+        a = new auth(keys),
+        etus=[];
+
+        function loadEtus(d){
+            if(!d)d=keys.promotions.filter(p=>p.key=="M2ACEHN2526")[0];
+            d3.csv(d.csv).then(data=>{
+                etus = data.filter(d=>d["Votre prénom"]).sort((a, b) => {
+                    const nameA = a["Votre prénom"].toUpperCase(); // ignore upper and lowercase
+                    const nameB = b["Votre prénom"].toUpperCase(); // ignore upper and lowercase
+                    if (nameA < nameB) {
+                        return -1;
+                    }
+                    if (nameA > nameB) {
+                        return 1;
+                    }
+
+                    // names must be equal
+                    return 0;
+                });
+                d3.select("#studentsList").selectAll("li").remove();
+                let divEtu = d3.select("#studentsList").selectAll("li").data(etus).enter().append("li")
+                    .attr("class","list-group-item d-flex justify-content-between align-items-center")
+                    .attr("id",(d,i)=>{
+                        d.i = i;
+                        return 'etu'+i;
+                    });
+                divEtu.append('span').html(d => {
+                        const initials = d["Votre prénom"][0].toUpperCase()+d["Votre prénom"].substring(1).toLowerCase()+' '+d["Votre nom"][0].toUpperCase()+d["Votre nom"].substring(1).toLowerCase();
+                        return `<h6 >${initials}</h6>`;
+                    });
+                divEtu.append('img').attr("src","assets/img/OmekaS.png")
+                    .style("height","32px")
+                    .style("float","right")
+                    .style("cursor","pointer")                    
+                    .on("click",getInfosOmk);
+            })
+        }
+        function getInfosOmk(e, d){
+            d3.select("#studentsList").selectAll("li").style("background-color","gray");
+            d3.select("#etu"+d.i).style("background-color","red");
+            a.omk.getUser(u=>{
+                console.log(u);
+                a.omk.getUserRessources(u['o:id'],(types,rs)=>{
+                    console.log(types,rs);
+                    d3.select('#chart').selectAll('div').remove();
+                    d3.select('#chart').selectAll('div').data(rs).enter().append('div')
+                        .html((r,i)=>types[i]+' = '+r.length);
+
+                })
+            },d["Votre mail"]);
+        }
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

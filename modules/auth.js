@@ -273,7 +273,7 @@ export class auth {
                         me.user.id=me.user['o:id'];
                         if(me.modal)me.modal.hide();
                         me.fctAuthOK.forEach(fct => {
-                            if(fct.name=='loadParcours')fct();            
+                            if(fct.name=='loadParcours' || fct.name=="loadEtus")fct();            
                         })
                     }
                     if(cb)cb(me.user);

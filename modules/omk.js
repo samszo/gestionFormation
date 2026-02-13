@@ -167,10 +167,26 @@ export class omk {
         }        
 
         this.getAdminLink = function(r,id=false,type=false){
-            if(!type)type = r['@type'][0];
-            return type=="o:Item" ?
-                me.api.replace("/api/","/admin/item/")+(id ? id : r['o:id'])
-                : me.api.replace("/api/","/admin/media/")+(id ? id : r['o:id'])             
+            if(!type)type = Array.isArray(r['@type']) ? r['@type'][0] : r['@type'];
+            let l = "";
+            switch (type) {
+                case "o:Item":
+                    l = me.api.replace("/api/","/admin/item/")+(id ? id : r['o:id'])
+                    break;
+                case "o:Media":
+                    l = me.api.replace("/api/","/admin/media/")+(id ? id : r['o:id'])  
+                    break;
+                case "o:ItemSet":
+                    l = me.api.replace("/api/","/admin/item-set/")+(id ? id : r['o:id'])  
+                    break;
+                case "o:Site":
+                    l = me.api.replace("/api/","/admin/site/s/")+(id ? id : r['o:slug'])  
+                    break;
+                case "o:ResourceTemplate":
+                    l = me.api.replace("/api/","/admin/resource-template/")+(id ? id : r['o:id'])  
+                    break;
+            }
+            return l;
         }
         this.getMediaLink = function(file){
             return me.api.replace("/api","")+file;
@@ -235,13 +251,16 @@ export class omk {
             d3.json(url).then((data) => {
                 me.user = data.length ? data[0] : false;
                 //TODO: mieux gérer anythingLLM Login
-                me.user.anythingLLM = me.anythingLLM ? syncRequest(me.api.replace('api/','s/cours-bnf/page/ajax?json=1&helper=anythingLLMlogin')) : false;
+                if(me.user) me.user.anythingLLM = me.anythingLLM ? syncRequest(me.api.replace('api/','s/cours-bnf/page/ajax?json=1&helper=anythingLLMlogin')) : false;
                 if(cb)cb(me.user);
             });
         }
-        this.getUserRessources = function (ownerId, cb, types=['items','item_sets','media','sites']){
-            Promise.all(types.map(t=>d3.json(me.api+t+'?owner_id='+ownerId))).then((values) => {
-                cb(types,values);
+        this.getUserRessources = function (ownerId, cb, types=['resource_templates','items','item_sets','media','sites']){
+            let rs = [];
+            if(types.includes("resource_templates"))rs.push(me.rts.filter(rt=> rt["o:owner"] && rt["o:owner"]['o:id']==ownerId ? true : false));
+            Promise.all(types.filter(t=>t!="resource_templates").map(t=>d3.json(me.api+t+'?owner_id='+ownerId))).then((values) => {
+                values.forEach(v=>rs.push(v));
+                cb(types,rs);
             });
         }
 

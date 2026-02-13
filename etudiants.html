@@ -43,7 +43,7 @@
                 <ul id="studentsList" class="list-group" ></ul>
             </div>
             <div class="col-md-8">
-                <h4>Statistiques</h4>
+                <h4>Liste des travaux</h4>
                 <div id="chart"></div>
             </div>
         </div>
@@ -104,21 +104,68 @@
                     .style("float","right")
                     .style("cursor","pointer")                    
                     .on("click",getInfosOmk);
+                divEtu.append('img').attr("src","assets/img/Octicons-mark-github.svg")
+                    .style("height","32px")
+                    .style("float","right")
+                    .style("cursor","pointer")                    
+                    .on("click",getInfosGitHub);
             })
         }
+        function getInfosGitHub(e,d){
+            selectEtu(d);
+            let gh = d3.select('#chart').append("div");
+            gh.append("h5").html("GitHub");
+            gh.append("h6").html("Repository du projet");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"])
+                .html(d["github du projet"]);
+            gh.append("h6").html("Etat d'avancement");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/etatAvancement.md")
+                .html(d["github du projet"]+"/blob/main/etatAvancement.md");
+            gh.append("h6").html("Vocabulaire");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/vocabs.csv")
+                .html(d["github du projet"]+"/blob/main/vocabs.csv");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/vocabs.ttl")
+                .html(d["github du projet"]+"/blob/main/vocabs.ttl");
+            gh.append("h6").html("Modélisation des acteurs");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/acteurs"+d["Votre compte GitHub"]+".md")
+                .html(d["github du projet"]+"/blob/main/acteurs"+d["Votre compte GitHub"]+".md");
+            gh.append("br")
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/acteurscollectif.md")
+                .html(d["github du projet"]+"/blob/main/acteurscollectif.md");
+             
+        }
         function getInfosOmk(e, d){
+            selectEtu(d);
+            a.omk.getUser(u=>{
+                let omk = d3.select('#chart').append("div");
+                omk.append("h6").html("Omeka S");
+
+                if(!u){
+                    omk.append("div")
+                        .attr("class","alert alert-danger")
+                        .attr("role","alert")
+                        .html("L'étudiant n'a pas été trouvé dans omk avec ce mail : "+d["Votre mail"])
+                } 
+                else{
+                    a.omk.getUserRessources(u['o:id'],(types,rs)=>{
+                        console.log(types,rs);
+                        let res = omk.selectAll('div').data(rs).enter().append('div')
+                            .html((r,i)=>types[i]+' = '+(r ? r.length:0));
+                        res.append('ul').attr("class","list-group list-group-flush")
+                            .selectAll('li').data(d=>{
+                                return d;
+                            }).enter().append('li').attr("class","list-group-item").html(r=>{
+                                return (r['@type']=="o:ResourceTemplate"?r["o:label"]:r["o:title"]) + " <a href='"+a.omk.getAdminLink(r)+"' target='_blank'> Voir dans omk</a>";
+                            })
+                    })
+                }
+            },d["Votre mail"]);
+        }
+
+        function selectEtu(d){
+            d3.select('#chart').selectAll('div').remove();
             d3.select("#studentsList").selectAll("li").style("background-color","gray");
             d3.select("#etu"+d.i).style("background-color","red");
-            a.omk.getUser(u=>{
-                console.log(u);
-                a.omk.getUserRessources(u['o:id'],(types,rs)=>{
-                    console.log(types,rs);
-                    d3.select('#chart').selectAll('div').remove();
-                    d3.select('#chart').selectAll('div').data(rs).enter().append('div')
-                        .html((r,i)=>types[i]+' = '+r.length);
-
-                })
-            },d["Votre mail"]);
         }
 
     </script>

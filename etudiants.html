@@ -132,7 +132,17 @@
             gh.append("br")
             gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/acteurscollectif.md")
                 .html(d["github du projet"]+"/blob/main/acteurscollectif.md");
-             
+            gh.append("h6").html("Notes de lecture");
+            gh.append("h7").append("a")
+                .attr("href","https://ethicaa.greyc.fr/media/files/ethicaa.white.paper.pdf")
+                .attr("target","_blank").html("Projet ethicaa");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/notesEthicaa"+d["Votre compte GitHub"]+".md")
+                .html(d["github du projet"]+"/blob/main/notesEthicaa"+d["Votre compte GitHub"]+".md");
+            gh.append("h7").append("a")
+                .attr("href","https://www.observatoireethiquepublique.com/assets/files/propositions/livre-blanc/livre-blanc-64-propositions-pour-une-ethique-des-systemes-dintelligence-artificielle_rm.pdf")
+                .attr("target","_blank").html("64 propositions pour une éthique des systèmes d'intelligence artificielle");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/notesEthicaa"+d["Votre compte GitHub"]+".md")
+                .html(d["github du projet"]+"/blob/main/64propEthiNum"+d["Votre compte GitHub"]+".md");
         }
         function getInfosOmk(e, d){
             selectEtu(d);

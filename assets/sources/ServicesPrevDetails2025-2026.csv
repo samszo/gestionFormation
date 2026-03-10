@@ -1,0 +1,363 @@
+idPersonne,Structure,Composante,Formation,Periode,code,Enseignement,FOAD,RegInsc,CM,TD
+1, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA2 , Economie et droit du numérique-,Non,"FI, FC, FA",7.50,7.50
+1, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDAA , Aspects éditoriaux de la réalisation multimédia-,Non,"FI, FC, FA",15.00,15.00
+1, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA5 , Traitement éditorial et création numérique-,Non,"FI, FC, FA",15.00,15.00
+2,UFR DROIT,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE7 ," Enjeux contemporains de l’éthique, du droit et normalisation-",Non,"FI, FC, FA",30.00,
+3, ,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE8 , Conduite de projet Legal Tech et participation conférences-,Non,"FI, FC, FA",15.00,15.00
+4, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME4ET06 , Atelier-Laboratoire,Non,"FI, FC, FA",24.00,
+5,UFR PSYCHOLOGIE,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE3 , Impact psychologique du numérique-,Non,"FI, FC, FA",1.20,1.80
+5,UFR PSYCHOLOGIE,I.E.D.,"M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles IED",,DNB4ED16 , Périnatalité-,Non,"FI, FC, FA",0.00,49.00
+5,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA3ED37 , Psychopathologie de l'enfant-,Non,"FI, FC, FA",4.80,7.20
+5,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA4ED16 , Périnatalité-,Non,"FI, FC, FA",11.00,16.00
+5,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+L2 Psychologie",,DP13EM01 , EC1 Domaine du dév. de la petite enfance à l'adolescence-,Non,"FI, FC, FA",28.80,43.20
+6, ,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA1EDEC , Initiation à la progmmation (pratique)-,Non,"FI, FC, FA",15.00,15.00
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA1 , Approches transversales des humanités numériques-,Non,"FI, FC, FA",7.00,0.00
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA3 , Introduction à la programmation-,Non,"FI, FC, FA",15.00,15.00
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA1EDC3 , Programmation de systèmes d’information-,Non,"FI, FC, FA",15.00,15.00
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC3 , Numérique en Ent. & management de l'info au sein d'une orga.-,Non,"FI, FC, FA",15.00,15.00
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC5 , Enjeux actuels du numérique-,Non,"FI, FC, FA",15.00,15.00
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M2 Informatique Parcours Conduite de Projet Informatique (CPI),,DMB3ED41 , Urbanisation des systemes d'information-,Non,"FI, FC, FA",16.80,7.20
+7,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED07 , Techniques de visualisation des données et interprétatio-,Non,"FI, FC, FA",13.50,13.50
+8, ,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA2EDE1 , Production collective interspécialisation sur transitions-,Non,"FI, FC, FA",7.50,7.50
+9,UFR M.I.T.S.I.C.,UFR CCOM,"Enseignement mutualisé
+M2 Industries culturelles Parcours Plateformes numériques, création et innovation",,DCB3EP01 , Plateformes numériques et logiques d'innovation-,Non,"FI, FC, FA",15.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME1ED04 , Notions fondamentales de muséologie-,Non,"FI, FC, FA",12.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME2ED06 , Politiques culturelles-,Non,"FI, FC, FA",24.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED02 , Histoire ou histoire des arts-,Non,"FI, FC, FA",24.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED03 , Forme et rôle de la médiation numérique-,Non,"FI, FC, FA",24.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED05 , Gestion des organisations culturelles-,Non,"FI, FC, FA",0.00,12.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED07 , Techniques de visualisation des données et interprétatio-,Non,"FI, FC, FA",12.00,12.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED08 , Atelier d'écriture numérique-,Non,"FI, FC, FA",0.00,20.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ER10 , Mémoire-,Non,"FI, FC, FA",0.00,90.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ER11 , Méthodologie du mémoire-,Non,"FI, FC, FA",0.00,22.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME4ED02 , Patrimoine et muséologie numériques-,Non,"FI, FC, FA",24.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME4ED03 , Méthodologie de l'analyse institutionnelle-,Non,"FI, FC, FA",12.00,0.00
+9,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME4EP05 , Conduite de projet-,Non,"FI, FC, FA",0.00,12.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA4 , Bases de données relationnelles-,Non,"FI, FC, FA",15.00,15.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC2 , Patrimoine augmenté-,Non,"FI, FC, FA",15.00,15.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Informatique Parcours Informatique et Big Data,,DMB1ED13 , INFO1 : Introduction aux technologies de l’Hypermédia-,Non,"FI, FC, FA",7.30,0.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Conduite de Projet Informatique (CPI)",,DMB3ED07 , De la modélisation des données vers les bases de données 2-,Non,"FI, FC, FA",18.00,18.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED25 , Techniques informatiques & web-,Non,"FI, FC, FA",15.00,15.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED27 , Outils et développement Multimédia-,Non,"FI, FC, FA",15.00,15.00
+10,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED30 , Méthodologie de rédaction et communication-,Non,"FI, FC, FA",15.00,15.00
+11,UFR M.I.T.S.I.C.,I.E.D.,M1 Informatique Spécialisation Big Data - IED,,DNF2ED05 , BD4 : Visualisation de données massives-,Non,"FI, FC, FA",0.00,15.50
+11,UFR M.I.T.S.I.C.,I.E.D.,L1 INFORMATIQUE IED,,DN22EM01 , Programmation impérative-,Non,"FI, FC, FA",0.00,40.50
+11,UFR M.I.T.S.I.C.,I.E.D.,L2 INFORMATIQUE IED,,DN24EM02 , Réalisation de programme-,Non,"FI, FC, FA",0.00,27.00
+11,UFR M.I.T.S.I.C.,I.E.D.,L3 INFORMATIQUE IED,,DN25ET01 , P tuteuré : état de l'art-,Non,"FI, FC, FA",0.00,5.00
+11,UFR M.I.T.S.I.C.,I.E.D.,L3 INFORMATIQUE IED,,DN26EP01 , Projet tuteuré : implémentation-,Non,"FI, FC, FA",0.00,5.00
+12, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED29 , Réseau & sécurité web-,Non,"FI, FC, FA",15.00,15.00
+12, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Mathématiques et Applications Parcours Cyber Sécurité et Sciences des Données",,DMC2EDA5 , Sécurité des réseaux-,Non,"FI, FC, FA",15.00,15.00
+13,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA1 , Immersion et interaction-,Non,"FI, FC, FA",15.00,15.00
+13,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA5 , Analyse critique-,Non,"FI, FC, FA",15.00,15.00
+13,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC5 , Enjeux actuels du numérique-,Non,"FI, FC, FA",15.00,15.00
+13,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA6 , Création et direction artistique crossmédias-,Non,"FI, FC, FA",15.00,15.00
+13,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA7 , Développement de prototypes crossmédias-,Non,"FI, FC, FA",15.00,15.00
+14, ,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE4 , Communication multimodale et marketing numérique-,Non,"FI, FC, FA",15.00,15.00
+15,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA6 , Suivi développement et intégration-,Non,"FI, FC, FA",15.00,15.00
+15,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA1 , Développement multi-plateformes,Non,"FI, FC, FA",15.00,15.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA1 , Approches transversales des humanités numériques-,Non,"FI, FC, FA",7.00,0.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB4 , Langages documentaires et classifications-,Non,"FI, FC, FA",15.00,15.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB5 , Gestion électronique des documents (GED)-,Non,"FI, FC, FA",0.00,24.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Gestion stratégique de l'information,,DMA2ESB7 , Stage et rapport-,Non,"FI, FC, FA",0.00,11.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDB1 , Initiation à la recherche-,Non,"FI, FC, FA",15.00,0.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDB3 , Gestion des connaissances-,Non,"FI, FC, FA",10.00,10.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4EDB1 , Etude des controverses-datavisualisation et analyse des....,Non,"FI, FC, FA",15.00,15.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4EDB2 , Système d'information et programmation internet-,Non,"FI, FC, FA",7.50,7.50
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4EDB3 , Méthodologie scientifique en information-communication,Non,"FI, FC, FA",0.00,6.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA4EDD6 , Méthodologie pour la conduite d'études-,Non,"FI, FC, FA",0.00,30.00
+16,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED04 , Economie de la contribution-,Non,"FI, FC, FA",12.00,0.00
+17, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB1 , Gestion d’un service info-documentaire,Non,"FI, FC, FA",15.00,15.00
+18, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA3 , Montage start up (grizz)-,Non,"FI, FC, FA",15.00,15.00
+19, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA1EDC3 , Programmation de systèmes d’information-,Non,"FI, FC, FA",15.00,15.00
+19, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC3 , Numérique en Ent. & management de l'info au sein d'une orga.-,Non,"FI, FC, FA",7.50,7.50
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA1 , Approches transversales des humanités numériques-,Non,"FI, FC, FA",3.00,3.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB1 , Intro. aux sciences de l'information et de la communication-,Non,"FI, FC, FA",21.00,0.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB5 , Culture et outils numériques-,Non,"FI, FC, FA",15.00,15.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB2 , Veille et recherche d'informations-,Non,"FI, FC, FA",9.00,21.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB4 , Systèmes de recherche d'information (SRI)-,Non,"FI, FC, FA",21.00,0.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB6 , Gestion des contenus-,Non,"FI, FC, FA",5.00,5.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDB2 , Pratiques info-communicationnelles,Non,"FI, FC, FA",15.00,0.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDCB , Etat de la recherche et veille documentaire-,Non,"FI, FC, FA",15.00,15.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4EDB3 , Méthodologie scientifique en information-communication,Non,"FI, FC, FA",0.00,7.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4ESB4 , Stage et conduite de projets professionnels-,Non,"FI, FC, FA",0.00,13.00
+20,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME4ED04 ," Dispositifs numériques : théories, modèles et usages-",Non,"FI, FC, FA",24.00,0.00
+21,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB3 , Records management-,Non,"FI, FC, FA",6.00,14.00
+22, ,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA4EDE1 , Entreprendre en transition numérique-,Non,"FI, FC, FA",7.50,7.50
+23,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDAA , Éditorialisation et strategie de contenu-,Non,"FI, FC, FA",15.00,15.00
+23,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA4EDA4 , Analyse des cas professionnels-,Non,"FI, FC, FA",0.00,30.00
+23,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA4EDA5 , Méthdologie de la recherche-,Non,"FI, FC, FA",0.00,15.00
+24, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA9 , Animation 2D et vidéo-,Non,"FI, FC, FA",15.00,15.00
+25,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1ED02 , Atelier texte animé et multimédia-,Non,"FI, FC, FA",15.00,15.00
+25,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA4 , Participation critique 1-,Non,"FI, FC, FA",15.00,15.00
+25,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC8 , Données Web : méthodes et outils d'analyse et de gestion-,Non,"FI, FC, FA",15.00,15.00
+25,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA3EDD7 , Conception universelle-,Non,"FI, FC, FA",15.00,15.00
+25,UFR M.I.T.S.I.C.,ARTEC,"Enseignement mutualisé
+M1 ArTeC Parcours : Les Nouveaux modes d'écriture et de publication",,4L8CN09P , MIP Grand format S8-,Non,"FI, FC, FA",0.00,15.00
+26, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA8 , Atelier vidéo enrichie et compositing-,Non,"FI, FC, FA",15.00,15.00
+27, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA4 , UX Design-,Non,"FI, FC, FA",15.00,15.00
+28,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB3 , Indexation des documents et métadonnées-,Non,"FI, FC, FA",15.00,0.00
+28,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDB9 , Veille stratégique et intelligence économique-,Non,"FI, FC, FA",9.00,21.00
+28,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME1ED09 , Informatiques et réseaux-,Non,"FI, FC, FA",0.00,24.00
+28,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME1ED10 , Conception de sites web et PAO-,Non,"FI, FC, FA",0.00,15.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB3 , Indexation des documents et métadonnées-,Non,"FI, FC, FA",0.00,15.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA1EDE1 , Initiation aux outils de communication numérique-,Non,"FI, FC, FA",15.00,15.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA1EDE7 , Conception et gestion de projet numérique-,Non,"FI, FC, FA",15.00,15.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2EDB6 , Gestion des contenus-,Non,"FI, FC, FA",5.00,5.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Gestion stratégique de l'information,,DMA2ESB7 , Stage et rapport-,Non,"FI, FC, FA",0.00,9.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA2ETB8 , Anglais-,Non,"FI, FC, FA",0.00,15.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA2ETE1 , Anglais-,Non,"FI, FC, FA",10.50,10.50
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4EDB3 , Méthodologie scientifique en information-communication,Non,"FI, FC, FA",0.00,2.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA4EDD1 , Anglais scientifique et technique-,Non,"FI, FC, FA",0.00,30.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4ESB4 , Stage et conduite de projets professionnels-,Non,"FI, FC, FA",0.00,2.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME2ED07 , Traitement du document-,Non,"FI, FC, FA",0.00,24.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME2ED08 , Traitement des images-,Non,"FI, FC, FA",0.00,12.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME3ED08 , Atelier d'écriture numérique-,Non,"FI, FC, FA",0.00,12.00
+29,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Patrimoine et musées Parcours Médiation culturelle, patrimoine et numérique",,DME4ET06 , Atelier-Laboratoire,Non,"FI, FC, FA",0.00,18.00
+29,UFR M.I.T.S.I.C.,NCU SO SKILLED,"Enseignement mutualisé
+NCU So Skilled (OSE)",,DP8LEK72 ," Prise de parole en public: maîtriser sa voix, son corps et s-",Non,"FI, FC, FA",0.00,30.00
+30,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB2 , Gestion de projet en ingénierie documentaire-,Non,"FI, FC, FA",12.00,0.00
+30,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDBA , Gestion stratégique de l'information-,Non,"FI, FC, FA",15.00,15.00
+30,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDB7 , Gestion de projet en transformation numérique-,Non,"FI, FC, FA",21.00,9.00
+31,I.E.D.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA1EDE2 , Les enjeux du numérique en psychologie-,Non,"FI, FC, FA",30.00,
+31,I.E.D.,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE3 , Impact psychologique du numérique-,Non,"FI, FC, FA",6.00,
+31,I.E.D.,I.E.D.,"M1 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles IED",,DNB2EM04 , Séminaire de recherche et suivi de mémoire-,Non,"FI, FC, FA",40.00,
+31,I.E.D.,I.E.D.,"M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles IED",,DNB4EM04 , Suivi de mémoire-,Non,"FI, FC, FA",40.00,
+31,I.E.D.,I.E.D.,L3 PSYCHOLOGIE IED,,DN35EN04 , Cycles de conférence-,Non,"FI, FC, FA",30.00,
+31,I.E.D.,I.E.D.,L3 PSYCHOLOGIE IED,,DN36EM02 , Processus langagiers-,Non,"FI, FC, FA",50.00,
+31,I.E.D.,I.E.D.,L3 PSYCHOLOGIE IED,,DN36EP04 ," Projet tuteuré Nouvelles technologies, éducation & formation-",Non,"FI, FC, FA",30.00,
+31,I.E.D.,RECHERCHE,Projet de recherche GTF,,ED,GTFNUM - Formations GTFeelnum,Non,FI,43.00,
+32, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDAC , EC4 Graphisme et ergonomie d'interfaces-,Non,"FI, FC, FA",15.00,15.00
+32, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA5 , Atelier image illustrator - photoshop,Non,"FI, FC, FA",15.00,15.00
+32, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA7 , Direction artistique-,Non,"FI, FC, FA",15.00,15.00
+32, ,DIRECTION DE LA FORMATION,Référentiel Direction Formation,,FTPA , Forfait tuteur (contrat de professionnalisation et d’apprentissage) par alternant-,Non,FI,0.00,3.00
+33, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Gestion stratégique de l'information",,DMA1EDB2 , Gestion de projet en ingénierie documentaire-,Non,"FI, FC, FA",3.00,15.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA2 , Economie et droit du numérique-,Non,"FI, FC, FA",0.00,15.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA1EDEB , Droit du numérique et cybersécurité-,Non,"FI, FC, FA",3.00,3.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA3EDA6 , Création et direction artistique crossmédias-,Non,"FI, FC, FA",8.00,7.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC3 , EC Ethnographie du numérique/Digital Methods-,Non,"FI, FC, FA",15.00,15.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA4EDA2 , Participation critique II-,Non,"FI, FC, FA",30.00,0.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA4EDA3 , Expression professionnelle en langue anglaise-,Non,"FI, FC, FA",15.00,15.00
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA4EDE2 , Production collective interspécialisation sur les transition-,Non,"FI, FC, FA",0.00,22.50
+34,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Conduite de Projet Informatique (CPI)",,DMB4ED02 , Gestion de projets-,Non,"FI, FC, FA",0.00,10.00
+35, ,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Transitions numériques,,DMA1EDEB , Droit du numérique et cybersécurité-,Non,"FI, FC, FA",7.50,7.50
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Création et édition numériques,,DMA1EDAD , Web Graphique et Design des Données (intro. outils num.)-,Non,"FI, FC, FA",15.00,15.00
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA1 , Approches transversales des humanités numériques-,Non,"FI, FC, FA",1.50,1.50
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA3 , Introduction à la programmation-,Non,"FI, FC, FA",15.00,15.00
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA3EDB6 , Design de l'information-,Non,"FI, FC, FA",10.00,10.00
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDCD , Visualisation interface et interactivité-,Non,"FI, FC, FA",15.00,15.00
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA3EDD5 , Analyse visuelle et graphisme web-,Non,"FI, FC, FA",15.00,15.00
+36,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA4EDA1 , Sémiotique des interfaces et des dispositifs numériques-,Non,"FI, FC, FA",15.00,15.00
+37, ,UFR M.I.T.S.I.C.,M1 Humanités numériques Parcours Création et édition numériques,,DMA1EDAD , Web Graphique et Design des Données (intro. outils num.)-,Non,"FI, FC, FA",15.00,15.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC2 , Hypermédia et web sémantique-,Non,"FI, FC, FA",15.00,15.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Création et édition numériques",,DMA4EDA2 , Participation critique II-,Non,"FI, FC, FA",7.30,7.30
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Informatique Parcours Informatique et Big Data,,DMB1ED13 , INFO1 : Introduction aux technologies de l’Hypermédia-,Non,"FI, FC, FA",15.00,0.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+PROGRAMME D'ECHANGES INTERNATIONAUX ARTS",,DMB2ED03 , Représentation des connaissances & gestion des données-,Non,"FI, FC, FA",15.30,15.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M1 Informatique Parcours Informatique et Big Data,,DMB2ED15 , Langage et Technologie WEB-,Non,"FI, FC, FA",15.30,0.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED23 , Technologies émergentes & Innovation-,Non,"FI, FC, FA",15.00,15.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED26 ," Visualisation, interface et interactivité-",Non,"FI, FC, FA",15.00,15.00
+38,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED40 , Théories et conception des hypermédias-,Non,"FI, FC, FA",15.00,15.00
+39,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA1EDC1 , Méthodes de recherche quantitatives et qualitatives-,Non,"FI, FC, FA",15.00,15.00
+39,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA1EDC5 , Fondamentaux info-communicationnels et technologiques,Non,"FI, FC, FA",15.00,15.00
+39,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA2 , Conception et gestion de projet numérique-,Non,"FI, FC, FA",21.00,9.00
+39,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA3EDD6 , Design des protocoles-,Non,"FI, FC, FA",15.00,15.00
+39,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA4EDD2 , Projet collaboratif tutoré-,Non,"FI, FC, FA",9.00,9.00
+39,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA4EDD7 , Communs et intelligence collective-,Non,"FI, FC, FA",15.00,15.00
+40,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA6 , Atelier 3D : modélisation-,Non,"FI, FC, FA",15.00,15.00
+40,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+L1 Informatique",,DM11EN01 , Introduction aux moteurs de jeux-,Non,"FI, FC, FA",30.00,30.00
+40,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+L1 Informatique",,DM12EN03 , Création et gestion de ressources-,Non,"FI, FC, FA",45.00,45.00
+40,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+L3 Informatique",,DM15ET01 ," M3P : Projet tuteuré, état de l'art-",Non,"FI, FC, FA",0.00,3.00
+40,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+L3 Informatique",,DM16EP01 , Projet tuteuré : implémentation-,Non,"FI, FC, FA",0.00,3.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA1 , Approches transversales des humanités numériques-,Non,"FI, FC, FA",0.00,6.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA3 , Introduction à la programmation-,Non,"FI, FC, FA",15.00,15.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA4 , Participation critique 1-,Non,"FI, FC, FA",12.00,0.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC7 , Atelier génération de texte-,Non,"FI, FC, FA",15.00,15.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA3EDD2 , Méthodes et outils d'analyses statistiques et de fouille-,Non,"FI, FC, FA",10.00,11.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Gestion stratégique de l'information",,DMA4EDB2 , Système d'information et programmation internet-,Non,"FI, FC, FA",0.00,15.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA4EDD4 , Ethique du web et écosystèmes d'information-,Non,"FI, FC, FA",15.00,15.00
+41,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED24 , Langages et développement web-,Non,"FI, FC, FA",15.00,15.00
+41,UFR M.I.T.S.I.C.,I.E.D.,L1 PSYCHOLOGIE IED,,DN32ET01 , Méthodologie de travail collaboratif-,Non,"FI, FC, FA",0.00,50.00
+42, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDCE , Enjeux des technologies émergnentes et innovantes-,Non,"FI, FC, FA",12.00,12.00
+42, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC4 , Numérique en ligne et nouvelle économie-,Non,"FI, FC, FA",15.00,15.00
+42, ,DIRECTION DE LA FORMATION,Référentiel Direction Formation,,FTPA , Forfait tuteur (contrat de professionnalisation et d’apprentissage) par alternant-,Non,FI,0.00,
+43, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA3 , Introduction à la programmation-,Non,"FI, FC, FA",7.50,7.50
+44, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA1EDA9 , Interaction 3D-,Non,"FI, FC, FA",15.00,15.00
+44, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA3 , After Effects-,Non,"FI, FC, FA",15.00,15.00
+45,UFR PSYCHOLOGIE,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE3 , Impact psychologique du numérique-,Non,"FI, FC, FA",3.00,0.00
+45,UFR PSYCHOLOGIE,I.E.D.,"M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles IED",,DNB3ED29 , Evaluation neuropsychologique 2- Enfant et adulte,Non,"FI, FC, FA",0.00,35.20
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M1 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA1ED21 , Parentalité-,Non,"FI, FC, FA",6.00,9.00
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M1 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA1ED23 , Théories et modèles du développement-,Non,"FI, FC, FA",3.60,5.40
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M1 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA1ED25 , Approfondissement méthodologique et statistiques appliquées-,Non,"FI, FC, FA",4.00,6.50
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M1 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA2EM04 , Séminaire de recherche et suivi de mémoire-,Non,"FI, FC, FA",0.00,15.00
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M1 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA2ES04 , Supervision de stage et stage-,Non,"FI, FC, FA",0.00,12.00
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA4ED17 , Dév. socio-émotionnel : des connaissances à l'application,Non,"FI, FC, FA",9.60,14.40
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA4ED19 , Préparation à la pratique professionnelle-,Non,"FI, FC, FA",6.00,9.00
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA4EM04 , Suivi de mémoire-,Non,"FI, FC, FA",0.00,17.50
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"M2 Psychologie Parcours Psychologie du développement : éducation, troubles et problématiques actuelles",,DPA4ES04 , Supervision de stage et stage-,Non,"FI, FC, FA",0.00,24.00
+45,UFR PSYCHOLOGIE,UFR PSYCHOLOGIE,"Enseignement mutualisé
+L2 Psychologie",,DP13EM01 , EC1 Domaine du dév. de la petite enfance à l'adolescence-,Non,"FI, FC, FA",14.40,21.60
+45,UFR PSYCHOLOGIE,RECHERCHE,Séminaires doctoraux toutes ED et toutes disciplines,,PRIODEDSDO01 , Séminaire doctoral-,Non,FI,0.00,3.00
+46, ,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA4EDE1 , Entreprendre en transition numérique-,Non,"FI, FC, FA",7.50,7.50
+47, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Analyse et Conception des environnements humains et numériques",,DMA4EDD8 , Veille informationnelle-,Non,"FI, FC, FA",20.00,
+48, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Création et édition numériques",,DMA2EDA8 , Interaction appliquée-,Non,"FI, FC, FA",15.00,15.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA2EDC6 , Design de l'information numérique-,Non,"FI, FC, FA",15.00,15.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC1 , Ville post-numérique,Non,"FI, FC, FA",15.00,15.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC4 , Prospectives numériques-,Non,"FI, FC, FA",15.00,15.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC5 , Conception collaborative et ergonomie (intensif)-,Non,"FI, FC, FA",15.00,15.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE1 , Veille et prospective-,Non,"FI, FC, FA",15.00,0.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,M2 Humanités numériques Parcours Transitions numériques,,DMA3EDE2 , Séminaire intensif sur la conception et l’accompagnement-,Non,"FI, FC, FA",15.00,0.00
+49,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Informatique Parcours Technologie de l'Hypermedia (THYP)",,DMB3ED28 , Gestion et conduite de projet-,Non,"FI, FC, FA",15.00,15.00
+50,UFR M.I.T.S.I.C.,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M2 Humanités numériques Parcours Numérique: Enjeux et technologies",,DMA3EDC7,Atelier génération de texte,Non,"FI, FC, FA",15.00,15.00
+51, ,UFR M.I.T.S.I.C.,"Enseignement mutualisé
+M1 Humanités numériques Parcours Numérique: Enjeux, technologies",,DMA1EDC4,Sémiotique du numérique,Non,"FI, FC, FA",15.00,15.00

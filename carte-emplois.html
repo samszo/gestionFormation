@@ -47,7 +47,7 @@
 
         let a = new auth({
             mail:'acehn@univ-paris8.fr',
-            apiOmk:'http://localhost/omk_gestForma/api/',
+            apiOmk:'http://localhost/omk_acehn/api/',
             //apiOmk:'https://acehn.jardindesconnaissances.fr/api',
             ident: 'Fe82ZlMwNP8KR88BKWzGNnF7eS5qChwr',
             key:'Jo5RZc9S3qr79GAe2TZk9UBakWcZbP48',
@@ -87,7 +87,7 @@
             })
             */
             //récupère les métiers et ou les appellations
-            let codes = await getCodeRome(); 
+            let codes = [{'type':"MACRO-COMPETENCE",'code':"100253"}] //await getCodeRome(); 
             token = await getFranceTravailToken();
             jobs=[];
             queryAllFranceTravail(codes, 0);

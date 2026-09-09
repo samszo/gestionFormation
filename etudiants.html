@@ -134,17 +134,27 @@
             gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/acteurscollectif.md")
                 .html(d["github du projet"]+"/blob/main/acteurscollectif.md");
             gh.append("h6").html("Notes de lecture");
-            gh.append("h7").append("a")
-                .attr("href","https://ethicaa.greyc.fr/media/files/ethicaa.white.paper.pdf")
-                .attr("target","_blank").html("Projet ethicaa");
+            gh.append("div").html("Projet ethicaa : ")
+                .append("a")
+                    .attr("href","https://ethicaa.greyc.fr/media/files/ethicaa.white.paper.pdf")
+                    .attr("target","_blank").html("https://ethicaa.greyc.fr/media/files/ethicaa.white.paper.pdf");
             gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/notesEthicaa"+d["Votre compte GitHub"]+".md")
                 .html(d["github du projet"]+"/blob/main/notesEthicaa"+d["Votre compte GitHub"]+".md");
-            gh.append("h7").append("a")
-                .attr("href","https://www.observatoireethiquepublique.com/assets/files/propositions/livre-blanc/livre-blanc-64-propositions-pour-une-ethique-des-systemes-dintelligence-artificielle_rm.pdf")
-                .attr("target","_blank").html("64 propositions pour une éthique des systèmes d'intelligence artificielle");
-            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/notesEthicaa"+d["Votre compte GitHub"]+".md")
+            gh.append("div").html("64 propositions pour une éthique des systèmes d'intelligence artificielle : ")
+                .append("a")
+                    .attr("href","https://www.observatoireethiquepublique.com/assets/files/propositions/livre-blanc/livre-blanc-64-propositions-pour-une-ethique-des-systemes-dintelligence-artificielle_rm.pdf")
+                    .attr("target","_blank").html("https://www.observatoireethiquepublique.com/assets/files/propositions/livre-blanc/livre-blanc-64-propositions-pour-une-ethique-des-systemes-dintelligence-artificielle_rm.pdf");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/64propEthiNum"+d["Votre compte GitHub"]+".md")
                 .html(d["github du projet"]+"/blob/main/64propEthiNum"+d["Votre compte GitHub"]+".md");
-        }
+
+            gh.append("div").html("Problématiques de l’éthique en sciences humaines et sociales :")
+                .append("a")
+                    .attr("href","https://www.google.com/url?q=https://journals.openedition.org/ctd/15227&sa=D&source=calendar&usd=2&usg=AOvVaw1lmzMzOV9qaYMcKZb-W4BT")
+                    .attr("target","_blank").html("https://www.google.com/url?q=https://journals.openedition.org/ctd/15227&sa=D&source=calendar&usd=2&usg=AOvVaw1lmzMzOV9qaYMcKZb-W4BT");
+            gh.append("a").attr("target",'_blank').attr("href",d["github du projet"]+"/blob/main/probEthiSHS"+d["Votre compte GitHub"]+".md")
+                .html(d["github du projet"]+"/blob/main/probEthiSHS"+d["Votre compte GitHub"]+".md");
+
+            }
         function getInfosOmk(e, d){
             selectEtu(d);
             a.omk.getUser(u=>{

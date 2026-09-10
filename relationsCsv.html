@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relations entre les fichiers CSV</title>
+
+    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
+    <script src="assets/js/handsontable.full.min.js"></script>
+    <script src="assets/js/d3.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #222;
+        }
+        h1 { color: #333; margin-bottom: 4px; }
+        h2 { color: #333; font-size: 18px; margin: 18px 0 8px; }
+        .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            padding: 16px;
+            margin-bottom: 18px;
+        }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+        .toolbar label { display: flex; flex-direction: column; font-size: 12px; color: #555; gap: 4px; }
+        .toolbar select, .toolbar input[type=range] { padding: 4px; }
+        button {
+            background-color: #007bff; color: #fff; border: none; border-radius: 4px;
+            padding: 8px 14px; cursor: pointer; font-size: 13px;
+        }
+        button:hover { background-color: #0056b3; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #545b62; }
+        .tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+        .tabs button { background: #e9ecef; color: #333; }
+        .tabs button.active { background: #007bff; color: #fff; }
+        .badges { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 0; }
+        .badge {
+            display: inline-block; padding: 5px 10px; border-radius: 14px;
+            font-size: 12px; font-weight: bold; color: #fff;
+        }
+        .b-conflit { background: #dc3545; }
+        .b-mut { background: #28a745; }
+        .b-int { background: #007bff; }
+        .b-salle { background: #fd7e14; }
+        .b-ec { background: #6f42c1; }
+        .b-manuelle { background: #20c997; }
+        .b-total { background: #343a40; }
+        .legend { font-size: 12px; color: #555; margin-top: 8px; }
+        .legend span { display:inline-block; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+        .grid-wrap { overflow: auto; }
+        .hot-container { width: 100%; }
+        #sourceInfo { font-size: 13px; margin: 8px 0; padding: 8px 10px; background: #eef4ff; border-left: 3px solid #007bff; border-radius: 3px; }
+        .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 4px; }
+        .muted { color: #888; font-size: 12px; }
+        details summary { cursor: pointer; font-weight: bold; color: #333; }
+        .rel-conflit { background: #f8d7da !important; }
+        .rel-mut { background: #d4edda !important; }
+        .rel-int { background: #dbeafe !important; }
+        .rel-salle { background: #ffe8d6 !important; }
+        .rel-ec { background: #ece2f8 !important; }
+        .rel-manuelle { background: #d1f5ec !important; }
+    </style>
+</head>
+<body>
+    <h1>Relations entre les fichiers CSV</h1>
+    <p class="subtitle">
+        Analyse des liens (mutualisations, intervenants partagés, salles partagées, conflits d'horaire,
+        intitulés proches) entre les plannings stockés dans <code>assets/data</code>.
+        Données affichées et éditables avec Handsontable.
+    </p>
+
+    <div id="loadError"></div>
+
+    <div class="card">
+        <div class="toolbar">
+            <label>Type de relation mis en avant
+                <select id="relFilter">
+                    <option value="all">Toutes</option>
+                    <option value="conflit horaire">Conflits d'horaire</option>
+                    <option value="mutualisation">Mutualisations</option>
+                    <option value="intervenant partagé">Intervenants partagés</option>
+                    <option value="salle partagée">Salles partagées</option>
+                    <option value="intitulé proche">Intitulés proches</option>
+                    <option value="manuelle">Relations manuelles</option>
+                </select>
+            </label>
+            <label>Seuil de similarité des intitulés : <span id="thVal">50</span>%
+                <input type="range" id="threshold" min="20" max="100" value="50" step="5">
+            </label>
+            <label><input type="checkbox" id="showAll"> Afficher aussi les lignes sans relation</label>
+            <button id="recalc">Recalculer</button>
+            <button class="secondary" id="exportRel">Exporter les relations (CSV)</button>
+        </div>
+        <div class="badges" id="badges"></div>
+        <div class="legend">
+            <span class="rel-conflit">conflit horaire</span>
+            <span class="rel-mut">mutualisation</span>
+            <span class="rel-int">intervenant partagé</span>
+            <span class="rel-salle">salle partagée</span>
+            <span class="rel-ec">intitulé proche</span>
+            <span class="rel-manuelle">manuelle</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>1. Données source</h2>
+        <div class="tabs" id="fileTabs"></div>
+        <div class="muted" id="fileMeta"></div>
+        <div class="grid-wrap"><div id="sourceGrid" class="hot-container" style="height: 360px;"></div></div>
+        <div style="margin-top:8px;">
+            <button class="secondary" id="exportSource">Exporter ce fichier (CSV)</button>
+            <span class="muted">Sélectionnez une ligne pour voir ses relations ci-dessous.</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>2. Données en relation</h2>
+        <div id="sourceInfo">Aucune ligne sélectionnée.</div>
+        <div class="grid-wrap"><div id="relatedGrid" class="hot-container" style="height: 340px;"></div></div>
+        <p class="muted">Cochez « Lien manuel » pour créer/retirer une relation manuelle avec la ligne sélectionnée.</p>
+    </div>
+
+    <div class="card">
+        <details open>
+            <summary>3. Référentiel des intervenants (données communes)</summary>
+            <div style="margin-top:8px;">
+                <label style="font-size:12px;color:#555;">
+                    <input type="checkbox" id="intSharedOnly" checked>
+                    Uniquement les intervenants présents dans au moins 2 cohortes
+                </label>
+                <span class="badge b-int" id="intCount" style="margin-left:10px;"></span>
+            </div>
+            <div class="grid-wrap" style="margin-top:10px;"><div id="intGrid" class="hot-container" style="height: 360px;"></div></div>
+            <button class="secondary" id="exportInt" style="margin-top:8px;">Exporter le référentiel (CSV)</button>
+        </details>
+    </div>
+
+    <div class="card">
+        <details open>
+            <summary>4. Toutes les relations détectées entre fichiers</summary>
+            <div class="grid-wrap" style="margin-top:10px;"><div id="allGrid" class="hot-container" style="height: 380px;"></div></div>
+        </details>
+    </div>
+
+    <div class="card">
+        <details>
+            <summary>5. Relations manuelles enregistrées (<span id="manualCount">0</span>)</summary>
+            <div id="manualList" style="margin-top:10px;"></div>
+            <button class="secondary" id="exportManual" style="margin-top:8px;">Exporter (JSON)</button>
+            <button class="secondary" id="clearManual" style="margin-top:8px;">Tout effacer</button>
+        </details>
+    </div>
+
+<script>
+/* ------------------------------------------------------------------ config */
+const DEF = { ecCol:'Intitulé EC', intCol:'Intervenant', jourCol:'Jour',
+    debCol:'Début', finCol:'Fin', parcoursCol:'Parcours' };
+const FILES = [
+    { id:'M1CEN',  path:'assets/data/M1CEN26-27.csv',  label:'M1 CEN',
+      aliases:['cen'], ...DEF, salle: r => [r['col21'], r['col22'], r['Commentaire']] },
+    { id:'M1MCPN', path:'assets/data/M1MCPN26-27.csv', label:'M1 MCPN / Patrimoine',
+      aliases:['mcpn','patrimoine'], ...DEF, salle: r => [r['Commentaire']] },
+    { id:'M1MSI',  path:'assets/data/M1MSI26-27.csv',  label:'M1 MSI / GSI',
+      aliases:['msi','gsi'], ...DEF, salle: r => [r['Commentaire']] },
+    { id:'M1NET',  path:'assets/data/M1NET26-27.csv',  label:'M1 NET',
+      aliases:['net'], ...DEF, salle: r => [r['Commentaire']] },
+    { id:'M2ACEHN', path:'assets/data/M2ACEHN26-27.csv', label:'M2 ACEHN',
+      aliases:['acehn'], ...DEF, salle: r => [r['col16'], r['Commentaire']] },
+    { id:'M2CEN',  path:'assets/data/M2CEN26-27.csv',  label:'M2 CEN',
+      aliases:['cen'], ...DEF, salle: r => [r['col22'], r['Commentaire']] },
+    { id:'M2MSI',  path:'assets/data/M2MSI26-27.csv',  label:'M2 MSI',
+      aliases:['msi','gsi'], ...DEF, salle: r => [r['Commentaire']] },
+    { id:'M2NET',  path:'assets/data/M2NET26-27.csv',  label:'M2 NET',
+      aliases:['net'], ...DEF, salle: r => [r['col17']] },
+    { id:'M2THYP', path:'assets/data/M2THYP26-27.csv', label:'M2 THYP / Hypermédia',
+      aliases:['thyp','hypermedia'], ...DEF, salle: r => [r['col21']] }
+];
+const LS_KEY = 'gf_relations_manuelles';
+
+/* ------------------------------------------------------------------ helpers */
+const stripAccents = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function parseCSV(text) {
+    const rows = d3.csvParseRows(text);
+    let headers = rows[0].map((h, i) => (h || '').trim() || ('col' + i));
+    const seen = {};
+    headers = headers.map(h => { if (seen[h] != null) { seen[h]++; return h + '_' + seen[h]; } seen[h] = 0; return h; });
+    const data = rows.slice(1)
+        .filter(r => r.some(c => (c || '').trim() !== ''))
+        .map(r => { const o = {}; headers.forEach((h, i) => o[h] = r[i] != null ? r[i].trim() : ''); return o; });
+    return { headers, data };
+}
+
+function normName(s) {
+    s = stripAccents(s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z\s-]/g, ' ');
+    const stop = new Set(['mr','mme','m','avec','le','la','et','de','du','mutualise']);
+    const t = s.split(/[\s-]+/).filter(x => x.length > 1 && !stop.has(x));
+    t.sort();
+    return t.join(' ');
+}
+function persons(val) {
+    const set = new Set();
+    if (!val) return set;
+    // marqueurs / placeholders : pas de vrais noms
+    if (/mutualis|confirmer|plusieurs|défini|defini|attente|inconnu|\bcdl\b|précis|precis/i.test(val)) return set;
+    String(val).split(/\s*[\/,]\s*| et /i).forEach(p => { const k = normName(p); if (k) set.add(k); });
+    return set;
+}
+function rooms(vals) {
+    const set = new Set();
+    (vals || []).forEach(v => {
+        const t = stripAccents(v).toUpperCase();
+        (t.match(/(?<![0-9A-Z])[A-J]\d{2,3}|CONDORCET(?:\s+\d\.\d+)?/g) || []).forEach(m => set.add(m.replace(/\s+/g, ' ')));
+    });
+    return set;
+}
+function toMin(s) {
+    if (!s) return null;
+    const m = String(s).trim().toLowerCase().replace(/\s/g, '').match(/(\d{1,2})[:h]?(\d{2})?/);
+    if (!m) return null;
+    const h = +m[1], min = m[2] ? +m[2] : 0;
+    return (h > 23 || min > 59) ? null : h * 60 + min;
+}
+function normDay(s) {
+    s = stripAccents(s).toLowerCase().trim();
+    if (!s || /\s(a|au)\s|,/.test(s)) return null;       // "lundi à vendredi" -> ignoré pour les conflits
+    const m = s.match(/lundi|mardi|mercredi|jeudi|vendredi|samedi/);
+    return m ? m[0] : null;
+}
+function tokset(s) {
+    s = stripAccents(s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9\s]/g, ' ');
+    const stop = new Set(['de','du','des','la','le','les','et','en','a','aux','au','d','l','ec','ec1','ec2','ec3','pratique','theorie','cours','atelier','intro','introduction']);
+    return new Set(s.split(/\s+/).filter(t => t.length > 2 && !stop.has(t)));
+}
+function sim(a, b) {
+    a = tokset(a); b = tokset(b);
+    if (!a.size || !b.size) return 0;
+    let inter = 0; a.forEach(t => b.has(t) && inter++);
+    return inter / Math.max(a.size, b.size);
+}
+function mutTargets(text, ownId) {
+    const set = new Set();
+    const t = stripAccents(text).toLowerCase();
+    if (!/mutualis/.test(t)) return set;
+    FILES.forEach(f => { if (f.id !== ownId && f.aliases.some(a => new RegExp('\\b' + a + '\\b').test(t))) set.add(f.id); });
+    return set;
+}
+
+/* ------------------------------------------------------------------ state */
+let store = {};           // id -> {headers, data, display}
+let manual = loadManual();
+let activeId = FILES[0].id;
+let selectedKey = null;   // "ID#physicalIndex"
+let hotSource, hotRelated, hotAll;
+
+function loadManual() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) { return []; } }
+function saveManual() { try { localStorage.setItem(LS_KEY, JSON.stringify(manual)); } catch (e) {} }
+function linkKey(a, b) { return [a, b].sort().join('||'); }
+const manualSet = () => new Set(manual.map(m => linkKey(m.a, m.b)));
+
+function fileById(id) { return FILES.find(f => f.id === id); }
+function rowMeta(cfg, row) {
+    const salleVals = cfg.salle(row);
+    const text = [row[cfg.ecCol], row[cfg.intCol], row['Commentaire']].join(' ');
+    return {
+        ec: row[cfg.ecCol] || '',
+        persons: persons(row[cfg.intCol]),
+        rooms: rooms(salleVals),
+        salleStr: [...rooms(salleVals)].join(', '),
+        day: normDay(row[cfg.jourCol]),
+        deb: toMin(row[cfg.debCol]),
+        fin: toMin(row[cfg.finCol]),
+        parcours: (row[cfg.parcoursCol] || cfg.id).trim(),
+        mut: mutTargets(text, cfg.id)
+    };
+}
+
+/* -------------------------------------------------- relation between 2 rows */
+function relate(aCfg, aRow, aIdx, bCfg, bRow, bIdx, threshold) {
+    if (aCfg.id === bCfg.id) return null;
+    const A = rowMeta(aCfg, aRow), B = rowMeta(bCfg, bRow);
+    const reasons = [], details = [];
+    let score = 0;
+
+    const pShared = [...A.persons].filter(p => B.persons.has(p));
+    if (pShared.length) { reasons.push('intervenant partagé'); details.push('intervenant : ' + pShared.join(', ')); score = Math.max(score, .9); }
+
+    const rShared = [...A.rooms].filter(r => B.rooms.has(r));
+    if (rShared.length) { reasons.push('salle partagée'); details.push('salle : ' + rShared.join(', ')); score = Math.max(score, .7); }
+
+    const s = sim(A.ec, B.ec);
+    const overlap = A.day && A.day === B.day && A.deb != null && B.deb != null && A.deb < B.fin && B.deb < A.fin;
+
+    const mutMention = A.mut.has(bCfg.id) || B.mut.has(aCfg.id);
+    if (mutMention && (s >= 0.34 || pShared.length || rShared.length || overlap)) {
+        reasons.push('mutualisation'); details.push('mutualisation explicite'); score = Math.max(score, .95);
+    }
+
+    if (s >= threshold) { reasons.push('intitulé proche'); details.push('intitulé ' + Math.round(s * 100) + '%'); score = Math.max(score, s); }
+
+    // conflit = même ressource (intervenant / salle) occupée au même créneau pour des cours différents
+    const sameCourse = mutMention || s >= 0.5;
+    if (overlap && (pShared.length || rShared.length) && !sameCourse) {
+        reasons.unshift('conflit horaire');
+        const res = pShared.length ? 'intervenant ' + pShared.join(', ') : 'salle ' + rShared.join(', ');
+        details.unshift('CONFLIT : ' + res + ' — ' + A.day + ' ' + aRow[aCfg.debCol] + '-' + aRow[aCfg.finCol]);
+        score = 1;
+    }
+
+    const isManual = manualSet().has(linkKey(aCfg.id + '#' + aIdx, bCfg.id + '#' + bIdx));
+    if (isManual) { reasons.push('manuelle'); score = Math.max(score, .6); }
+
+    if (!reasons.length) return null;
+    return { reasons, top: reasons[0], detail: details.join(' ; '), score, manual: isManual };
+}
+
+/* ------------------------------------------------------------------ render */
+const relClass = { 'conflit horaire': 'rel-conflit', 'mutualisation': 'rel-mut', 'intervenant partagé': 'rel-int',
+    'salle partagée': 'rel-salle', 'intitulé proche': 'rel-ec', 'manuelle': 'rel-manuelle' };
+
+function threshold() { return +document.getElementById('threshold').value / 100; }
+function relFilter() { return document.getElementById('relFilter').value; }
+function showAll() { return document.getElementById('showAll').checked; }
+
+function buildTabs() {
+    const box = document.getElementById('fileTabs');
+    box.innerHTML = '';
+    FILES.forEach(f => {
+        const b = document.createElement('button');
+        b.textContent = f.label + ' (' + (store[f.id] ? store[f.id].data.length : 0) + ')';
+        b.className = f.id === activeId ? 'active' : '';
+        b.onclick = () => { activeId = f.id; selectedKey = null; renderSource(); renderRelated(); buildTabs(); };
+        box.appendChild(b);
+    });
+}
+
+function renderSource() {
+    const cfg = fileById(activeId), st = store[activeId];
+    document.getElementById('fileMeta').textContent = cfg.path + ' — ' + st.data.length + ' lignes, ' + st.display.length + ' colonnes';
+    const columns = st.display.map(h => ({ data: h }));
+    if (hotSource) hotSource.destroy();
+    hotSource = new Handsontable(document.getElementById('sourceGrid'), {
+        data: st.data, colHeaders: st.display, columns, rowHeaders: true,
+        height: 360, stretchH: 'all', autoWrapRow: false, manualColumnResize: true,
+        filters: true, dropdownMenu: true, multiColumnSorting: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        afterSelectionEnd: (r) => {
+            const phys = hotSource.toPhysicalRow(r);
+            if (phys == null) return;
+            selectedKey = activeId + '#' + phys;
+            renderRelated();
+        },
+        afterChange: (ch, src) => { if (src !== 'loadData') debounceRecalc(); }
+    });
+    window.__hot = Object.assign(window.__hot || {}, { source: hotSource });
+}
+
+function fmtRow(cfg, row) {
+    return (row[cfg.ecCol] || '(sans intitulé)') + ' — ' + (row[cfg.jourCol] || '?') + ' ' +
+        (row[cfg.debCol] || '') + '-' + (row[cfg.finCol] || '') +
+        (row[cfg.intCol] ? ' · ' + row[cfg.intCol] : '');
+}
+
+function renderRelated() {
+    const info = document.getElementById('sourceInfo');
+    if (!selectedKey) { info.textContent = 'Aucune ligne sélectionnée.'; if (hotRelated) hotRelated.loadData([]); return; }
+    const [sid, sidx] = selectedKey.split('#');
+    const sCfg = fileById(sid), sRow = store[sid].data[+sidx];
+    info.innerHTML = '<b>' + sCfg.label + '</b> · ' + fmtRow(sCfg, sRow);
+
+    const th = threshold(), filt = relFilter(), all = showAll();
+    const out = [];
+    FILES.forEach(f => {
+        if (f.id === sid) return;
+        store[f.id].data.forEach((row, i) => {
+            const rel = relate(sCfg, sRow, +sidx, f, row, i, th);
+            if (!rel && !all) return;
+            if (rel && filt !== 'all' && !rel.reasons.includes(filt)) return;
+            const m = rowMeta(f, row);
+            out.push({
+                _key: f.id + '#' + i,
+                Fichier: f.label,
+                'Intitulé EC': row[f.ecCol] || '',
+                Intervenant: row[f.intCol] || '',
+                Jour: row[f.jourCol] || '',
+                Début: row[f.debCol] || '',
+                Fin: row[f.finCol] || '',
+                Salle: m.salleStr,
+                Relation: rel ? rel.reasons.join(', ') : '',
+                Score: rel ? Math.round(rel.score * 100) : 0,
+                Détail: rel ? rel.detail : '',
+                'Lien manuel': manualSet().has(linkKey(selectedKey, f.id + '#' + i)),
+                _top: rel ? rel.top : ''
+            });
+        });
+    });
+    out.sort((a, b) => b.Score - a.Score);
+
+    const cols = ['Fichier','Intitulé EC','Intervenant','Jour','Début','Fin','Salle','Relation','Score','Détail','Lien manuel'];
+    const columns = cols.map(c => c === 'Lien manuel'
+        ? { data: c, type: 'checkbox' }
+        : { data: c, readOnly: true });
+
+    if (hotRelated) hotRelated.destroy();
+    hotRelated = new Handsontable(document.getElementById('relatedGrid'), {
+        data: out, colHeaders: cols, columns, rowHeaders: true,
+        height: 340, stretchH: 'all', manualColumnResize: true,
+        filters: true, dropdownMenu: true, multiColumnSorting: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        cells(r) {
+            const rowData = this.instance.getSourceDataAtRow(this.instance.toPhysicalRow(r));
+            if (rowData && rowData._top && relClass[rowData._top]) return { className: relClass[rowData._top] };
+            return {};
+        },
+        afterChange: (ch, src) => {
+            if (src === 'loadData' || !ch) return;
+            ch.forEach(([r, prop, oldV, newV]) => {
+                if (prop !== 'Lien manuel') return;
+                const rowData = hotRelated.getSourceDataAtRow(r);
+                const key = linkKey(selectedKey, rowData._key);
+                if (newV) {
+                    if (!manualSet().has(key)) manual.push({ a: selectedKey, b: rowData._key,
+                        labelA: sCfg.label + ' / ' + fmtRow(sCfg, sRow),
+                        labelB: rowData.Fichier + ' / ' + rowData['Intitulé EC'], ts: Date.now() });
+                } else {
+                    manual = manual.filter(m => linkKey(m.a, m.b) !== key);
+                }
+                saveManual();
+                renderManual();
+                debounceRecalc();
+            });
+        }
+    });
+    window.__hot = Object.assign(window.__hot || {}, { related: hotRelated });
+}
+
+function renderAll() {
+    const th = threshold(), filt = relFilter();
+    const rows = [], seen = new Set();
+    for (let x = 0; x < FILES.length; x++) {
+        for (let y = x + 1; y < FILES.length; y++) {
+            const A = FILES[x], B = FILES[y];
+            store[A.id].data.forEach((ra, ia) => {
+                store[B.id].data.forEach((rb, ib) => {
+                    const rel = relate(A, ra, ia, B, rb, ib, th);
+                    if (!rel) return;
+                    if (filt !== 'all' && !rel.reasons.includes(filt)) return;
+                    const cA = (ra[A.jourCol] || '') + ' ' + (ra[A.debCol] || '') + '-' + (ra[A.finCol] || '');
+                    const cB = (rb[B.jourCol] || '') + ' ' + (rb[B.debCol] || '') + '-' + (rb[B.finCol] || '');
+                    // dédoublonne les lignes répétées séance par séance (ex. M2 ACEHN)
+                    const dedup = [A.id, ra[A.ecCol], cA, B.id, rb[B.ecCol], cB, rel.reasons.join()].join('¦');
+                    if (seen.has(dedup)) return;
+                    seen.add(dedup);
+                    rows.push({
+                        Type: rel.reasons.join(', '),
+                        'Fichier A': A.label, 'Intitulé A': ra[A.ecCol] || '', 'Créneau A': cA,
+                        'Fichier B': B.label, 'Intitulé B': rb[B.ecCol] || '', 'Créneau B': cB,
+                        Détail: rel.detail, Score: Math.round(rel.score * 100), _top: rel.top
+                    });
+                });
+            });
+        }
+    }
+    rows.sort((a, b) => b.Score - a.Score);
+
+    const cols = ['Type','Fichier A','Intitulé A','Créneau A','Fichier B','Intitulé B','Créneau B','Détail','Score'];
+    if (hotAll) hotAll.destroy();
+    hotAll = new Handsontable(document.getElementById('allGrid'), {
+        data: rows, colHeaders: cols, columns: cols.map(c => ({ data: c, readOnly: true })),
+        rowHeaders: true, height: 380, stretchH: 'all', manualColumnResize: true,
+        filters: true, dropdownMenu: true, multiColumnSorting: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        cells(r) {
+            const rd = this.instance.getSourceDataAtRow(this.instance.toPhysicalRow(r));
+            if (rd && rd._top && relClass[rd._top]) return { className: relClass[rd._top] };
+            return {};
+        }
+    });
+    renderBadges(rows);
+    return rows;
+}
+
+function renderBadges(allRows) {
+    const c = { 'conflit horaire': 0, 'mutualisation': 0, 'intervenant partagé': 0, 'salle partagée': 0, 'intitulé proche': 0, 'manuelle': 0 };
+    allRows.forEach(r => Object.keys(c).forEach(k => { if (r.Type.includes(k)) c[k]++; }));
+    const map = [['b-total', 'Relations : ' + allRows.length], ['b-conflit', 'Conflits : ' + c['conflit horaire']],
+        ['b-mut', 'Mutualisations : ' + c['mutualisation']], ['b-int', 'Intervenants : ' + c['intervenant partagé']],
+        ['b-salle', 'Salles : ' + c['salle partagée']], ['b-ec', 'Intitulés proches : ' + c['intitulé proche']],
+        ['b-manuelle', 'Manuelles : ' + manual.length]];
+    document.getElementById('badges').innerHTML = map.map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
+}
+
+/* -------------------------------------------------- référentiel intervenants */
+function buildIntervenants() {
+    const map = new Map();   // clé normalisée -> agrégat
+    FILES.forEach(f => {
+        const st = store[f.id]; if (!st) return;
+        st.data.forEach(row => {
+            const raw = row[f.intCol];
+            const valid = persons(raw);
+            if (!valid.size) return;
+            String(raw).split(/\s*[\/,]\s*| et /i).forEach(part => {
+                const k = normName(part);
+                if (!valid.has(k)) return;
+                if (!map.has(k)) map.set(k, { names: new Map(), cohortes: new Set(), ecs: [], ecKeys: new Set() });
+                const e = map.get(k);
+                e.names.set(part.trim(), (e.names.get(part.trim()) || 0) + 1);
+                e.cohortes.add(f.label);
+                const ec = row[f.ecCol] || '(sans intitulé)', jour = row[f.jourCol] || '',
+                    deb = row[f.debCol] || '', fin = row[f.finCol] || '';
+                const ecKey = [f.label, ec, jour, deb, fin].join('¦');
+                if (e.ecKeys.has(ecKey)) return;   // séances répétées (ex. M2 ACEHN) comptées une fois
+                e.ecKeys.add(ecKey);
+                e.ecs.push({ file: f.label, ec, jour, deb, fin });
+            });
+        });
+    });
+    return map;
+}
+
+function renderIntervenants() {
+    const sharedOnly = document.getElementById('intSharedOnly').checked;
+    const map = buildIntervenants();
+    const rows = [];
+    map.forEach(e => {
+        if (sharedOnly && e.cohortes.size < 2) return;
+        const disp = [...e.names.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0];
+        let conflits = 0;
+        for (let i = 0; i < e.ecs.length; i++) for (let j = i + 1; j < e.ecs.length; j++) {
+            const a = e.ecs[i], b = e.ecs[j];
+            if (a.file === b.file) continue;
+            const da = normDay(a.jour);
+            if (da && da === normDay(b.jour)) {
+                const a1 = toMin(a.deb), a2 = toMin(a.fin), b1 = toMin(b.deb), b2 = toMin(b.fin);
+                if (a1 != null && b1 != null && a2 != null && b2 != null && a1 < b2 && b1 < a2) conflits++;
+            }
+        }
+        rows.push({
+            Intervenant: disp,
+            'Nb cohortes': e.cohortes.size,
+            Cohortes: [...e.cohortes].sort().join(', '),
+            'Nb EC': e.ecs.length,
+            Conflits: conflits,
+            EC: e.ecs.map(x => x.file + ' : ' + x.ec + (x.jour ? ' (' + x.jour + ' ' + x.deb + '-' + x.fin + ')' : '')).join('  |  '),
+            Variantes: [...e.names.keys()].join(' / ')
+        });
+    });
+    rows.sort((a, b) => b['Nb cohortes'] - a['Nb cohortes'] || b['Nb EC'] - a['Nb EC'] || a.Intervenant.localeCompare(b.Intervenant));
+
+    document.getElementById('intCount').textContent = rows.length + ' intervenant' + (rows.length > 1 ? 's' : '');
+    const cols = ['Intervenant', 'Nb cohortes', 'Cohortes', 'Nb EC', 'Conflits', 'EC', 'Variantes'];
+    if (window.__hotInt) window.__hotInt.destroy();
+    window.__hotInt = new Handsontable(document.getElementById('intGrid'), {
+        data: rows, colHeaders: cols, rowHeaders: true,
+        columns: cols.map(c => ({ data: c, readOnly: true })),
+        colWidths: [170, 90, 210, 60, 70, 460, 190],
+        height: 360, manualColumnResize: true, autoWrapRow: false,
+        filters: true, dropdownMenu: true, multiColumnSorting: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        cells(r) {
+            const rd = this.instance.getSourceDataAtRow(this.instance.toPhysicalRow(r));
+            if (rd && rd.Conflits > 0) return { className: 'rel-conflit' };
+            if (rd && rd['Nb cohortes'] > 1) return { className: 'rel-int' };
+            return {};
+        }
+    });
+    window.__intRows = rows;
+}
+
+function renderManual() {
+    document.getElementById('manualCount').textContent = manual.length;
+    const box = document.getElementById('manualList');
+    if (!manual.length) { box.innerHTML = '<span class="muted">Aucune relation manuelle.</span>'; return; }
+    box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        manual.map((m, i) => '<tr>' +
+            '<td style="border:1px solid #ddd;padding:4px;">' + (m.labelA || m.a) + '</td>' +
+            '<td style="border:1px solid #ddd;padding:4px;">&harr;</td>' +
+            '<td style="border:1px solid #ddd;padding:4px;">' + (m.labelB || m.b) + '</td>' +
+            '<td style="border:1px solid #ddd;padding:4px;"><button class="secondary" data-i="' + i + '">Supprimer</button></td>' +
+            '</tr>').join('') + '</table>';
+    box.querySelectorAll('button[data-i]').forEach(b => b.onclick = () => {
+        manual.splice(+b.dataset.i, 1); saveManual(); renderManual(); recalcAll();
+    });
+}
+
+/* ------------------------------------------------------------------ actions */
+let recalcTimer;
+function debounceRecalc() { clearTimeout(recalcTimer); recalcTimer = setTimeout(recalcAll, 400); }
+function recalcAll() { renderAll(); renderRelated(); renderIntervenants(); }
+
+function csvEscape(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function download(name, content, mime) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+function exportRelations() {
+    const rows = renderAll();
+    const cols = ['Type','Fichier A','Intitulé A','Créneau A','Fichier B','Intitulé B','Créneau B','Détail','Score'];
+    const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => csvEscape(r[c])).join(','))).join('\r\n');
+    download('relations_csv.csv', csv, 'text/csv;charset=utf-8');
+}
+
+/* ------------------------------------------------------------------ init */
+function wire() {
+    document.getElementById('threshold').addEventListener('input', e => {
+        document.getElementById('thVal').textContent = e.target.value; debounceRecalc();
+    });
+    document.getElementById('relFilter').addEventListener('change', recalcAll);
+    document.getElementById('showAll').addEventListener('change', renderRelated);
+    document.getElementById('recalc').addEventListener('click', recalcAll);
+    document.getElementById('exportRel').addEventListener('click', exportRelations);
+    document.getElementById('exportSource').addEventListener('click', () => {
+        const st = store[activeId];
+        const csv = [st.display.map(csvEscape).join(',')]
+            .concat(st.data.map(r => st.display.map(h => csvEscape(r[h])).join(','))).join('\r\n');
+        download(fileById(activeId).path.split('/').pop(), csv, 'text/csv;charset=utf-8');
+    });
+    document.getElementById('intSharedOnly').addEventListener('change', renderIntervenants);
+    document.getElementById('exportInt').addEventListener('click', () => {
+        const rows = window.__intRows || [];
+        const cols = ['Intervenant','Nb cohortes','Cohortes','Nb EC','Conflits','EC','Variantes'];
+        const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => csvEscape(r[c])).join(','))).join('\r\n');
+        download('referentiel_intervenants.csv', csv, 'text/csv;charset=utf-8');
+    });
+    document.getElementById('exportManual').addEventListener('click', () =>
+        download('relations_manuelles.json', JSON.stringify(manual, null, 2), 'application/json'));
+    document.getElementById('clearManual').addEventListener('click', () => {
+        if (confirm('Effacer toutes les relations manuelles ?')) { manual = []; saveManual(); renderManual(); recalcAll(); }
+    });
+}
+
+Promise.all(FILES.map(f => d3.text(f.path).then(t => ({ id: f.id, ...parseCSV(t) })).catch(() => null)))
+    .then(res => {
+        const ok = res.filter(Boolean);
+        if (!ok.length) {
+            document.getElementById('loadError').innerHTML =
+                '<div class="error">Impossible de charger les CSV. Ouvrez cette page via un serveur web ' +
+                '(les requêtes <code>file://</code> sont bloquées par le navigateur).</div>';
+            return;
+        }
+        ok.forEach(r => {
+            r.display = r.headers.filter(h => r.data.some(row => row[h] !== ''));
+            store[r.id] = r;
+        });
+        if (res.some(r => !r)) document.getElementById('loadError').innerHTML =
+            '<div class="error">Certains fichiers n\'ont pas pu être chargés.</div>';
+        wire();
+        buildTabs();
+        renderSource();
+        renderManual();
+        recalcAll();
+    });
+</script>
+</body>
+</html>

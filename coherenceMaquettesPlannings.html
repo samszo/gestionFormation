@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cohérence des cours</title>
+    <title>Cohérence Maquettes & Plannings</title>
 
-    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
-    <script src="assets/js/handsontable.full.min.js"></script>
-    <script src="assets/js/d3.min.js"></script>
-    <!-- API du custom widget Grist : définit window.grist si la page est chargée dans l'iframe d'un widget.
-         Un échec de chargement (page ouverte hors Grist) n'empêche pas le reste de fonctionner. -->
+    <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+    <!-- API du custom widget Grist : cette page N'A DE SENS QUE dans l'iframe d'un widget Grist
+         (elle ne lit aucun CSV, toutes les données viennent de tables du document). -->
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 
     <style>
@@ -38,6 +37,7 @@
             padding: 8px 14px; cursor: pointer; font-size: 13px;
         }
         button:hover { background-color: #0056b3; }
+        button:disabled { opacity: .5; cursor: default; }
         button.secondary { background-color: #6c757d; }
         button.secondary:hover { background-color: #545b62; }
         .tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -70,18 +70,39 @@
         .rel-ec { background: #ece2f8 !important; }
         .rel-manuelle { background: #d1f5ec !important; }
         .rel-horsref { background: #fff3cd !important; }
+        .src-row { margin-bottom: 8px; border: 1px solid #e2e2e2; border-radius: 6px; padding: 8px 12px; }
+        .src-row summary { font-weight: normal; font-size: 13px; }
+        .src-row summary code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; }
+        .src-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+        .src-field { display: flex; flex-direction: column; font-size: 12px; color: #555; gap: 4px; min-width: 160px; }
+        .src-field select { padding: 4px; }
     </style>
 </head>
 <body>
     <h1>Cohérence des cours</h1>
     <p class="subtitle">
-        Analyse des liens (mutualisations, intervenants partagés, salles partagées, conflits d'horaire,
-        intitulés proches) entre les plannings stockés dans <code>assets/data</code>.
-        Données affichées et éditables avec Handsontable.
+        Même analyse que <code>relationsCsv.html</code> (mutualisations, intervenants partagés, salles partagées,
+        conflits d'horaire, cohérence avec la maquette LMD5, écarts avant/après correction), mais avec des données
+        lues directement dans des <b>tables du document Grist</b> plutôt que dans des fichiers CSV.
         <span id="gristStatus" class="muted" style="margin-left:8px;"></span>
     </p>
 
     <div id="loadError"></div>
+
+    <div class="card">
+        <h2>0. Sources Grist</h2>
+        <p class="muted">
+            Associez chaque source logique à une table du document, puis vérifiez la correspondance des colonnes
+            (détectée automatiquement par ressemblance de nom, à corriger si besoin). Nécessite l'accès complet
+            (<code>requiredAccess: 'full'</code>) pour lire les tables par nom. La configuration est enregistrée
+            comme option du widget (partagée avec tous les utilisateurs du document).
+        </p>
+        <div class="toolbar" style="margin-bottom:10px;">
+            <button class="secondary" id="refreshTables">Actualiser la liste des tables</button>
+            <button id="loadBtn">Charger les données</button>
+        </div>
+        <div id="sourcesPanel"></div>
+    </div>
 
     <div class="card">
         <div class="toolbar">
@@ -163,8 +184,7 @@
         <details open>
             <summary>3 ter. Cohérence référentiel des cours ↔ maquette LMD5</summary>
             <p class="muted" style="margin:6px 0;">
-                Rapprochement de chaque EC planifié avec la maquette
-                <code>assets/data/EDT_26-27/HNmaquetteLMD5ListeEC.csv</code>
+                Rapprochement de chaque EC planifié avec la table Grist configurée comme « Maquette LMD5 » en section 0
                 (appariement par parcours + intitulé, comparaison des volumes horaires).
             </p>
             <div class="badges" id="cohBadges"></div>
@@ -186,14 +206,14 @@
 
     <div class="card">
         <details open>
-            <summary>3 quater. Écarts fichiers source (.csv) ↔ fichiers corrigés (…cor.csv)</summary>
+            <summary>3 quater. Écarts table principale ↔ table d'origine</summary>
             <p class="muted" style="margin:6px 0;">
-                Différences ligne à ligne entre chaque planning d'origine et sa version corrigée
-                (appariement par intitulé EC + jour + horaire de début).
+                Pour chaque source où une « table d'origine » a été configurée en section 0 : différences ligne à
+                ligne avec la table principale (appariement par intitulé EC + jour + horaire de début).
             </p>
             <div class="badges" id="diffBadges"></div>
             <div class="legend" style="margin-top:6px;">
-                <span class="rel-mut">ajoutée (cor)</span>
+                <span class="rel-mut">ajoutée (principale)</span>
                 <span class="rel-conflit">retirée (origine)</span>
                 <span class="rel-ec">modifiée</span>
             </div>
@@ -201,7 +221,7 @@
                 Fichier :
                 <select id="diffFile"><option value="all">Tous</option></select>
             </label>
-            <h3 style="font-size:14px;margin:12px 0 4px;">Synthèse par fichier</h3>
+            <h3 style="font-size:14px;margin:12px 0 4px;">Synthèse par source</h3>
             <div class="grid-wrap"><div id="diffSummaryGrid" class="hot-container" style="height: 220px;"></div></div>
             <h3 style="font-size:14px;margin:14px 0 4px;">Détail des lignes différentes</h3>
             <div class="grid-wrap"><div id="diffGrid" class="hot-container" style="height: 360px;"></div></div>
@@ -226,49 +246,23 @@
     </div>
 
 <script>
-/* ------------------------------------------------------------------ intégration Grist (custom widget) */
-// La page reste 100% autonome (CSV chargés en relatif) : elle fonctionne aussi bien ouverte
-// directement dans un navigateur que collée comme URL de custom widget dans Grist. Pour Grist :
-//  - servir ce dossier (relationsCsv.html + assets/) en HTTPS (http://localhost accepté en dev) ;
+/* ==================================================================== intégration Grist */
+// Cette page n'a de sens QUE dans l'iframe d'un widget Grist : elle ne lit aucun CSV, toutes
+// les données proviennent de tables du document via grist.docApi. Pour la déployer :
+//  - servir ce dossier (relationsGrist.html + assets/) en HTTPS (http://localhost accepté en dev) ;
 //  - le serveur ne doit pas envoyer de X-Frame-Options / CSP frame-ancestors bloquant l'iframe ;
-//  - les CSV sont résolus en relatif à l'URL du widget, donc doivent rester servis à côté du HTML.
-// window.self !== window.top : la page n'a de parent à négocier que si elle est réellement
-// chargée dans une iframe (le cas d'un widget Grist) — évite un handshake RPC voué à l'échec
-// (et son bruit console) quand la page est simplement ouverte dans un onglet.
+//  - dans Grist : Ajouter un widget → Personnalisé → coller l'URL de cette page ;
+//  - accepter l'accès complet (« full ») demandé : nécessaire pour lire les tables par nom
+//    (grist.docApi.listTables / fetchTable) — le widget ne lit que les tables que VOUS associez
+//    en section 0, mais l'API ne permet pas de restreindre l'accès table par table.
+console.log("ça démarre");
 const inGrist = typeof grist !== 'undefined' && window.self !== window.top;
-let gristConnected = false;   // confirmé seulement après un appel RPC réussi (ex. getOption ci-dessous)
-if (inGrist) {
-    try { grist.ready({ requiredAccess: 'none' }); }   // aucune table Grist n'est lue, le widget gère ses propres CSV
-    catch (e) { /* API indisponible (parent hors Grist) : mode autonome */ }
-}
+let gristConnected = false;
 
-/* ------------------------------------------------------------------ config */
-const DEF = { ecCol:'Intitulé EC', intCol:'Intervenant', jourCol:'Jour',
-    debCol:'Début', finCol:'Fin', parcoursCol:'Parcours', nbCol:'Nb de cours' };
-const FILES = [
-    { id:'M1CEN',  path:'assets/data/EDT_26-27/M1CEN26-27.csv',  label:'M1 CEN',
-      aliases:['cen'], ...DEF, salle: r => [r['col21'], r['col22'], r['Commentaire']] },
-    { id:'M1MCPN', path:'assets/data/EDT_26-27/M1MCPN26-27.csv', label:'M1 MCPN',
-      aliases:['mcpn','patrimoine'], ...DEF, salle: r => [r['Commentaire']] },
-    { id:'M1MSI',  path:'assets/data/EDT_26-27/M1MSI26-27.csv',  label:'M1 MSI',
-      aliases:['msi','gsi'], ...DEF, salle: r => [r['Commentaire']] },
-    { id:'M1NET',  path:'assets/data/EDT_26-27/M1NET26-27.csv',  label:'M1 NET',
-      aliases:['net'], ...DEF, salle: r => [r['Commentaire']] },
-    { id:'M2ACEHN', path:'assets/data/EDT_26-27/M2ACEHN26-27.csv', label:'M2 ACEHN',
-      aliases:['acehn'], ...DEF, salle: r => [r['col16'], r['Commentaire']] },
-    { id:'M2CEN',  path:'assets/data/EDT_26-27/M2CEN26-27.csv',  label:'M2 CEN',
-      aliases:['cen'], ...DEF, salle: r => [r['col22'], r['Commentaire']] },
-    { id:'M2MSI',  path:'assets/data/EDT_26-27/M2MSI26-27.csv',  label:'M2 MSI',
-      aliases:['msi','gsi'], ...DEF, salle: r => [r['Commentaire']] },
-    { id:'M2NET',  path:'assets/data/EDT_26-27/M2NET26-27.csv',  label:'M2 NET',
-      aliases:['net'], ...DEF, salle: r => [r['col17']] },
-    { id:'M2THYP', path:'assets/data/EDT_26-27/M2THYP26-27.csv', label:'M2 THYP',
-      aliases:['thyp','hypermedia'], ...DEF, salle: r => [r['col21']] }
-];
-const LS_KEY = 'gf_relations_manuelles';
-
-/* ------------------------------------------------------------------ helpers */
+/* ==================================================================== helpers génériques (identiques à relationsCsv.html) */
 const stripAccents = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* met une majuscule en première lettre de chaque mot (gère - et ') */
 function titleCase(s) {
@@ -293,99 +287,6 @@ function heuresCours(deb, fin, nb) {
     return d == null ? 0 : Math.round(d * nbCours(nb) * 100) / 100;
 }
 
-/* référentiel des intervenants chargé depuis le CSV (variante -> nom canonique) */
-const REF_PATH = 'assets/data/EDT_26-27/referentiel_intervenants.csv';
-const refIndex = { byVariant: new Map(), canonKey: new Map(), statut: new Map() };
-function buildRefIndex(text) {
-    const { data } = parseCSV(text);
-    data.forEach(r => {
-        const canonRaw = (r.Intervenant || '').trim();
-        if (!canonRaw) return;
-        const ck = normName(canonRaw);
-        if (!ck) return;
-        refIndex.canonKey.set(ck, titleCase(canonRaw));
-        refIndex.statut.set(ck, (r.Statut || '').trim());
-        [canonRaw].concat(String(r.Variantes || '').split(/\s*\/\s*/)).forEach(v => {
-            const vk = normName(v);
-            if (vk) refIndex.byVariant.set(vk, ck);
-        });
-    });
-}
-/* clé de regroupement d'un nom : clé canonique du référentiel si connue, sinon nom normalisé */
-function canonKeyOf(variantKey) { return refIndex.byVariant.get(variantKey) || variantKey; }
-
-/* ---------------------------------------------- maquette officielle LMD5 (HN) */
-const MAQ_PATH = 'assets/data/EDT_26-27/HNmaquetteLMD5ListeEC.csv';
-let maquette = [];   // [{parcours, code, semestre, niveau, ue, ec, statut, vhe, vhm, ects, coeff}]
-
-/* code parcours normalisé, commun aux plannings et à la maquette */
-function parcoursCode(s) {
-    const t = stripAccents(String(s || '')).toLowerCase();
-    if (/analyse et conception|\bacehn\b/.test(t)) return 'ACEHN';
-    if (/creation et exp|\bcen\b/.test(t)) return 'CEN';
-    if (/management strat|\bmsi\b|\bgsi\b/.test(t)) return 'MSI';
-    if (/enjeux|\bnet\d*\b/.test(t)) return 'NET';
-    if (/patrimoine|\bmcpn\b/.test(t)) return 'MCPN';
-    if (/hypermedia|\bthyp\b/.test(t)) return 'THYP';
-    return null;
-}
-/* nombre "à la française" ("30,0" -> 30) */
-function numFR(v) {
-    const n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
-    return isFinite(n) ? n : null;
-}
-/* lignes "conteneur" de la maquette (pas de vrai EC) */
-const MAQ_CONTAINER = /^\s*(choisir|ue au choix|ue \d|choix|\s*)$|parmi/i;
-/* EC jamais présents dans un planning (stage, mémoire…) */
-const MAQ_NON_PLANIF = /\bstages?\b|m[ée]moire|^oral$|^rapport$|soutenance|^ec libre$|libre \d|^\s*fle\b/i;
-
-function buildMaquette(text) {
-    const { data } = parseCSV(text);
-    maquette = data.map(r => {
-        const sem = (r['Semestre'] || '').trim();
-        return {
-            parcours: (r['Parcours'] || '').trim(),
-            code: parcoursCode(r['Parcours']),
-            semestre: sem,
-            niveau: /^[12]$/.test(sem) ? 'M1' : /^[34]$/.test(sem) ? 'M2' : '',
-            ue: (r['Intitulés des UE'] || '').trim(),
-            codePegase: (r['Code Pégase'] || '').trim(),
-            ec: (r['Intitulés des EC'] || '').trim(),
-            statut: (r["Type d'enseignement-Statut"] || '').trim(),
-            vhe: numFR(r['Volume horaire Etudiant (VHE)']),
-            vhm: numFR(r['Volume horaire Maquette (VHM)']),
-            ects: numFR(r['ECTS']),
-            coeff: numFR(r['Coeff'])
-        };
-    }).filter(m => m.ec && !MAQ_CONTAINER.test(m.ec));
-}
-
-/* charge un fichier : si "<nom>cor.csv" existe on le prend à la place de "<nom>.csv",
-   et on conserve la version d'origine dans `origine` pour le calcul des écarts */
-function loadCsvFile(f) {
-    const corPath = f.path.replace(/\.csv$/i, 'cor.csv');
-    return d3.text(corPath)
-        .then(t => d3.text(f.path).catch(() => null).then(src => {
-            const r = { id: f.id, path: corPath, corrige: true, ...parseCSV(t) };
-            if (src != null) { const o = parseCSV(src); r.origine = { path: f.path, headers: o.headers, data: o.data }; }
-            return r;
-        }))
-        .catch(() => d3.text(f.path)
-            .then(t => ({ id: f.id, path: f.path, corrige: false, ...parseCSV(t) }))
-            .catch(() => null));
-}
-
-function parseCSV(text) {
-    const rows = d3.csvParseRows(text);
-    let headers = rows[0].map((h, i) => (h || '').trim() || ('col' + i));
-    const seen = {};
-    headers = headers.map(h => { if (seen[h] != null) { seen[h]++; return h + '_' + seen[h]; } seen[h] = 0; return h; });
-    const data = rows.slice(1)
-        .filter(r => r.some(c => (c || '').trim() !== ''))
-        .map(r => { const o = {}; headers.forEach((h, i) => o[h] = r[i] != null ? r[i].trim() : ''); return o; });
-    return { headers, data };
-}
-
 function normName(s) {
     s = stripAccents(s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z\s-]/g, ' ');
     const stop = new Set(['mr','mme','m','avec','le','la','et','de','du','mutualise']);
@@ -396,7 +297,6 @@ function normName(s) {
 function persons(val) {
     const set = new Set();
     if (!val) return set;
-    // marqueurs / placeholders : pas de vrais noms
     if (/mutualis|confirmer|plusieurs|défini|defini|attente|inconnu|\bcdl\b|précis|precis/i.test(val)) return set;
     String(val).split(/\s*[\/,]\s*| et /i).forEach(p => { const k = normName(p); if (k) set.add(k); });
     return set;
@@ -418,7 +318,7 @@ function toMin(s) {
 }
 function normDay(s) {
     s = stripAccents(s).toLowerCase().trim();
-    if (!s || /\s(a|au)\s|,/.test(s)) return null;       // "lundi à vendredi" -> ignoré pour les conflits
+    if (!s || /\s(a|au)\s|,/.test(s)) return null;
     const m = s.match(/lundi|mardi|mercredi|jeudi|vendredi|samedi/);
     return m ? m[0] : null;
 }
@@ -429,7 +329,7 @@ function tokset(s, loose) {
 }
 function sim(a, b) {
     let A = tokset(a), B = tokset(b);
-    if (!A.size || !B.size) { A = tokset(a, true); B = tokset(b, true); }   // repli : intitulés très courts (« 3D », « UI »…)
+    if (!A.size || !B.size) { A = tokset(a, true); B = tokset(b, true); }
     if (!A.size || !B.size) return 0;
     let inter = 0; A.forEach(t => B.has(t) && inter++);
     return inter / Math.max(A.size, B.size);
@@ -441,40 +341,336 @@ function mutTargets(text, ownId) {
     FILES.forEach(f => { if (f.id !== ownId && f.aliases.some(a => new RegExp('\\b' + a + '\\b').test(t))) set.add(f.id); });
     return set;
 }
+/* nombre "à la française" ("30,0" -> 30), tolère aussi un nombre déjà natif (colonne Numeric Grist) */
+function numFR(v) {
+    const n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : null;
+}
 
-/* ------------------------------------------------------------------ state */
-let store = {};           // id -> {headers, data, display}
-let manual = [];          // chargé de façon asynchrone (localStorage et/ou option du widget Grist) avant le premier rendu
-let activeId = FILES[0].id;
-let selectedKey = null;   // "ID#physicalIndex"
-let hotSource, hotRelated, hotAll;
+/* ==================================================================== config des sources logiques */
+const DEF = { ecCol:'Intitulé EC', intCol:'Intervenant', jourCol:'Jour',
+    debCol:'Début', finCol:'Fin', parcoursCol:'Parcours', nbCol:'Nb de cours' };
 
-/* Relations manuelles : dans Grist, stockées comme option du widget (partagées, visibles par
-   tout le monde sur le document) ; hors Grist (ou si l'API échoue), repli sur le localStorage
-   du navigateur. localStorage sert aussi de cache local même dans Grist. */
+const EDT_SOURCES = [
+    /*
+    { id:'M1CEN',  label:'M1 CEN',  aliases:['cen'] },
+    { id:'M1MCPN', label:'M1 MCPN', aliases:['mcpn','patrimoine'] },
+    */
+    { id:'M1MSI26_27',  label:'M1 MSI',  aliases:['msi','gsi'] },
+    /*
+    { id:'M1NET',  label:'M1 NET',  aliases:['net'] },
+    { id:'M2ACEHN',label:'M2 ACEHN',aliases:['acehn'] },
+    { id:'M2CEN',  label:'M2 CEN',  aliases:['cen'] },
+    { id:'M2MSI',  label:'M2 MSI',  aliases:['msi','gsi'] },
+    { id:'M2NET',  label:'M2 NET',  aliases:['net'] },
+     */
+    { id:'M2THYP26_27', label:'M2 THYP', aliases:['thyp','hypermedia'] }
+];
+console.log(EDT_SOURCES);
+const EDT_FIELDS = [
+    { key:'ec', label:'Intitulé EC', syn:['intituleec','intitule','nomec','coursec'] },
+    { key:'int', label:'Intervenant', syn:['intervenant','enseignant','professeur','prof'] },
+    { key:'jour', label:'Jour', syn:['jour'] },
+    { key:'deb', label:'Début', syn:['debut','heuredebut'] },
+    { key:'fin', label:'Fin', syn:['fin','heurefin'] },
+    { key:'nb', label:'Nb de cours', syn:['nbdecours','nombredecours','nbcours','nbseances'] },
+    { key:'parcours', label:'Parcours', syn:['parcours','filiere'] },
+    { key:'commentaire', label:'Commentaire', syn:['commentaire','commentaires','remarque','note'] },
+    { key:'salle', label:'Salle (optionnel)', syn:['salle','local','lieu'] }
+];
+const REF_FIELDS = [
+    { key:'intervenant', label:'Intervenant', syn:['intervenant'] },
+    { key:'statut', label:'Statut', syn:['statut','status'] },
+    { key:'variantes', label:'Variantes', syn:['variantes','variante','alias'] }
+];
+const MAQ_FIELDS = [
+    { key:'parcours', label:'Parcours', syn:['parcours'] },
+    { key:'semestre', label:'Semestre', syn:['semestre','sem'] },
+    { key:'ue', label:'Intitulé UE', syn:['intitulesdesue','intituleue','ue'] },
+    { key:'codePegase', label:'Code Pégase', syn:['codepegase','pegase'] },
+    { key:'ec', label:'Intitulé EC', syn:['intitulesdesec','intituleec'] },
+    { key:'statut', label:'Statut', syn:['typedenseignementstatut','statut','type'] },
+    { key:'vhe', label:'VHE', syn:['volumehoraireetudiantvhe','vhe','volumehoraireetudiant'] },
+    { key:'vhm', label:'VHM', syn:['volumehorairemaquettevhm','vhm','volumehorairemaquette'] },
+    { key:'ects', label:'ECTS', syn:['ects'] },
+    { key:'coeff', label:'Coeff', syn:['coeff','coefficient'] }
+];
+const REQUIRED = { EDT: ['ec','int','jour','deb','fin'], REF: ['intervenant'], MAQ: ['parcours','ec'] };
+const fieldsFor = key => key === 'REF' ? REF_FIELDS : key === 'MAQ' ? MAQ_FIELDS : EDT_FIELDS;
+const kindOf = key => key === 'REF' ? 'REF' : key === 'MAQ' ? 'MAQ' : 'EDT';
+
+const LS_KEY = 'gf_relations_manuelles_grist';
+const CFG_KEY = 'gf_grist_source_config';
+
+/* code parcours normalisé, commun aux plannings et à la maquette */
+function parcoursCode(s) {
+    const t = stripAccents(String(s || '')).toLowerCase();
+    if (/analyse et conception|\bacehn\b/.test(t)) return 'ACEHN';
+    if (/creation et exp|\bcen\b/.test(t)) return 'CEN';
+    if (/management strat|\bmsi\b|\bgsi\b/.test(t)) return 'MSI';
+    if (/enjeux|\bnet\d*\b/.test(t)) return 'NET';
+    if (/patrimoine|\bmcpn\b/.test(t)) return 'MCPN';
+    if (/hypermedia|\bthyp\b/.test(t)) return 'THYP';
+    return null;
+}
+/* lignes "conteneur" de la maquette (pas de vrai EC) */
+const MAQ_CONTAINER = /^\s*(choisir|ue au choix|ue \d|choix|\s*)$|parmi/i;
+/* EC jamais présents dans un planning (stage, mémoire…) */
+const MAQ_NON_PLANIF = /\bstages?\b|m[ée]moire|^oral$|^rapport$|soutenance|^ec libre$|libre \d|^\s*fle\b/i;
+
+/* référentiel des intervenants (variante -> nom canonique) */
+const refIndex = { byVariant: new Map(), canonKey: new Map(), statut: new Map() };
+function buildRefIndex(data) {
+    data.forEach(r => {
+        const canonRaw = (r.Intervenant || '').trim();
+        if (!canonRaw) return;
+        const ck = normName(canonRaw);
+        if (!ck) return;
+        refIndex.canonKey.set(ck, titleCase(canonRaw));
+        refIndex.statut.set(ck, (r.Statut || '').trim());
+        [canonRaw].concat(String(r.Variantes || '').split(/\s*\/\s*/)).forEach(v => {
+            const vk = normName(v);
+            if (vk) refIndex.byVariant.set(vk, ck);
+        });
+    });
+}
+function canonKeyOf(variantKey) { return refIndex.byVariant.get(variantKey) || variantKey; }
+
+let maquette = [];
+function buildMaquette(data) {
+    maquette = data.map(r => {
+        const sem = (r['Semestre'] || '').trim();
+        return {
+            parcours: (r['Parcours'] || '').trim(),
+            code: parcoursCode(r['Parcours']),
+            semestre: sem,
+            niveau: /^[12]$/.test(sem) ? 'M1' : /^[34]$/.test(sem) ? 'M2' : '',
+            ue: (r['Intitulés des UE'] || '').trim(),
+            codePegase: (r['Code Pégase'] || '').trim(),
+            ec: (r['Intitulés des EC'] || '').trim(),
+            statut: (r["Type d'enseignement-Statut"] || '').trim(),
+            vhe: numFR(r['Volume horaire Etudiant (VHE)']),
+            vhm: numFR(r['Volume horaire Maquette (VHM)']),
+            ects: numFR(r['ECTS']),
+            coeff: numFR(r['Coeff'])
+        };
+    }).filter(m => m.ec && !MAQ_CONTAINER.test(m.ec));
+}
+
+/* ==================================================================== accès aux tables Grist */
+let tableList = [];                 // noms des tables du document
+const tableCache = new Map();       // tableId -> {cols:[...], rows:[{...,_gristId}]}
+let sourceConfig = {};              // { M1CEN:{table,origTable,cols:{...}}, ..., REF:{...}, MAQ:{...} }
+
+/* normalise une valeur Grist (texte, nombre, liste encodée) en chaîne */
+function gristStr(v) {
+    if (v == null) return '';
+    if (Array.isArray(v)) return v.slice(1).filter(x => x != null).join(', ');   // ex. Choice List : ['L', 'a', 'b']
+    return String(v).trim();
+}
+async function fetchTableCached(tableId) {
+    if (!tableId) return null;
+    if (tableCache.has(tableId)) return tableCache.get(tableId);
+    const raw = await grist.docApi.fetchTable(tableId);
+    const cols = Object.keys(raw).filter(k => k !== 'id' && k !== 'manualSort');
+    const n = (raw.id || []).length;
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+        const row = { _gristId: raw.id[i] };
+        cols.forEach(c => { row[c] = raw[c][i]; });
+        rows.push(row);
+    }
+    const entry = { cols, rows };
+    tableCache.set(tableId, entry);
+    return entry;
+}
+function normalizeEdtRow(cols, r) {
+    return {
+        'Intitulé EC': gristStr(r[cols.ec]),
+        'Intervenant': gristStr(r[cols.int]),
+        'Jour': gristStr(r[cols.jour]),
+        'Début': gristStr(r[cols.deb]),
+        'Fin': gristStr(r[cols.fin]),
+        'Nb de cours': gristStr(r[cols.nb]),
+        'Parcours': gristStr(r[cols.parcours]),
+        'Commentaire': gristStr(r[cols.commentaire]),
+        'Salle': gristStr(r[cols.salle])
+    };
+}
+
+/* ------------------------------------------------------- correspondance automatique tables/colonnes */
+function normColId(s) { return stripAccents(String(s || '')).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function bestColMatch(cols, synonyms) {
+    let best = '', bestScore = 0;
+    cols.forEach(c => {
+        const nc = normColId(c);
+        synonyms.forEach(syn => {
+            const ns = normColId(syn);
+            if (!ns) return;
+            let score = 0;
+            if (nc === ns) score = 100;
+            else if (nc.includes(ns)) score = 80 - Math.abs(nc.length - ns.length);
+            else if (ns.includes(nc)) score = 60 - Math.abs(nc.length - ns.length);
+            if (score > bestScore) { bestScore = score; best = c; }
+        });
+    });
+    return bestScore >= 40 ? best : '';
+}
+function autoGuessCols(cols, fields) {
+    const out = {};
+    fields.forEach(f => { out[f.key] = bestColMatch(cols, f.syn); });
+    return out;
+}
+function levelHint(id) { return id.startsWith('M1') ? '1' : id.startsWith('M2') ? '2' : ''; }
+function matchesAlias(t, source) {
+    const n = normColId(t);
+    return source.aliases.some(a => n.includes(normColId(a)));
+}
+/* ne garde que les tables dont le nom contient le chiffre de niveau (1 ou 2) isolé (pas comme
+   partie d'un autre nombre, ex. une année) ; sans indice de niveau, ne filtre rien */
+function filterByLevel(tables, lvl) {
+    if (!lvl) return tables;
+    return tables.filter(t => new RegExp('(^|[^0-9])' + lvl + '([^0-9]|$)').test(normColId(t)));
+}
+function guessMainTable(tables, source) {
+    // filtrage strict par niveau : mieux vaut laisser la source non configurée que de deviner
+    // une table du mauvais niveau (M1 vs M2) qui partage le même alias (ex. "cen")
+    const cands = filterByLevel(tables.filter(t => matchesAlias(t, source)), levelHint(source.id));
+    if (!cands.length) return '';
+    const withCor = cands.find(t => normColId(t).includes('cor'));
+    return withCor || cands[0];
+}
+function guessOrigTable(tables, source, mainTable) {
+    const cands = filterByLevel(tables.filter(t => matchesAlias(t, source) && t !== mainTable), levelHint(source.id));
+    const withoutCor = cands.find(t => !normColId(t).includes('cor'));
+    return withoutCor || '';
+}
+async function autoDetectAll() {
+    for (const src of EDT_SOURCES) {
+        const table = guessMainTable(tableList, src);
+        const origTable = table ? guessOrigTable(tableList, src, table) : '';
+        let cols = {};
+        if (table) { const entry = await fetchTableCached(table); cols = autoGuessCols(entry.cols, EDT_FIELDS); }
+        sourceConfig[src.id] = { table, origTable, cols };
+    }
+    const refTable = tableList.find(t => /referentiel/.test(normColId(t)) && /intervenant/.test(normColId(t))) || '';
+    let refCols = {};
+    if (refTable) { const entry = await fetchTableCached(refTable); refCols = autoGuessCols(entry.cols, REF_FIELDS); }
+    sourceConfig.REF = { table: refTable, cols: refCols };
+
+    const maqTable = tableList.find(t => /maquette|lmd\d/.test(normColId(t))) || '';
+    let maqCols = {};
+    if (maqTable) { const entry = await fetchTableCached(maqTable); maqCols = autoGuessCols(entry.cols, MAQ_FIELDS); }
+    sourceConfig.MAQ = { table: maqTable, cols: maqCols };
+}
+
+/* ------------------------------------------------------- panneau de configuration (section 0) */
+function tableSelectHTML(attrs, current) {
+    const opts = ['<option value="">— aucune —</option>']
+        .concat(tableList.map(t => '<option value="' + escHtml(t) + '"' + (t === current ? ' selected' : '') + '>' + escHtml(t) + '</option>'));
+    return '<select ' + attrs + '>' + opts.join('') + '</select>';
+}
+function fieldSelectHTML(sourceKey, field, cols, current) {
+    const opts = ['<option value="">—</option>']
+        .concat(cols.map(c => '<option value="' + escHtml(c) + '"' + (c === current ? ' selected' : '') + '>' + escHtml(c) + '</option>'));
+    return '<label class="src-field">' + escHtml(field.label) +
+        '<select data-src="' + escHtml(sourceKey) + '" data-field="' + escHtml(field.key) + '">' + opts.join('') + '</select></label>';
+}
+async function renderSourceRow(key, label, withOrig) {
+    const fields = fieldsFor(key);
+    const cfg = sourceConfig[key] || (sourceConfig[key] = { table: '', origTable: '', cols: {} });
+    const entry = cfg.table ? await fetchTableCached(cfg.table).catch(() => null) : null;
+    const cols = entry ? entry.cols : [];
+    const req = REQUIRED[kindOf(key)];
+    const complete = cfg.table && req.every(k => cfg.cols[k]);
+    const status = !cfg.table ? '—' : (complete ? '✅' : '⚠️');
+    const fieldsHtml = fields.map(f => fieldSelectHTML(key, f, cols, cfg.cols[f.key] || '')).join('');
+    const origHtml = withOrig
+        ? '<label class="src-field">Table d\'origine (optionnel, pour écarts)' +
+          tableSelectHTML('data-src="' + escHtml(key) + '" data-orig="1"', cfg.origTable) + '</label>'
+        : '';
+    return '<details class="src-row">' +
+        '<summary>' + status + ' ' + escHtml(label) + (cfg.table ? ' — <code>' + escHtml(cfg.table) + '</code>' : ' (non configuré)') + '</summary>' +
+        '<div class="src-fields">' +
+        '<label class="src-field">Table' + tableSelectHTML('data-src="' + escHtml(key) + '"', cfg.table) + '</label>' +
+        origHtml + fieldsHtml +
+        '</div></details>';
+}
+async function renderSourcesPanel() {
+    const box = document.getElementById('sourcesPanel');
+    const parts = [];
+    for (const src of EDT_SOURCES) parts.push(await renderSourceRow(src.id, src.label, true));
+    parts.push(await renderSourceRow('REF', 'Référentiel intervenants', false));
+    parts.push(await renderSourceRow('MAQ', 'Maquette LMD5', false));
+    box.innerHTML = parts.join('');
+    wireSourcesPanel();
+}
+function wireSourcesPanel() {
+    document.getElementById('sourcesPanel').querySelectorAll('select[data-src]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const key = sel.dataset.src;
+            const cfg = sourceConfig[key] || (sourceConfig[key] = { table: '', origTable: '', cols: {} });
+            if (sel.dataset.orig) {
+                cfg.origTable = sel.value;
+            } else if (sel.dataset.field) {
+                cfg.cols[sel.dataset.field] = sel.value;
+            } else {
+                cfg.table = sel.value;
+                cfg.cols = {};
+                if (sel.value) {
+                    const entry = await fetchTableCached(sel.value);
+                    cfg.cols = autoGuessCols(entry.cols, fieldsFor(key));
+                }
+            }
+            saveSourceConfig();
+            renderSourcesPanel();
+        });
+    });
+}
+function saveSourceConfig() {
+    try { localStorage.setItem(CFG_KEY, JSON.stringify(sourceConfig)); } catch (e) {}
+    if (inGrist) { try { Promise.resolve(grist.setOption(CFG_KEY, sourceConfig)).catch(() => {}); } catch (e) {} }
+}
+async function loadSourceConfig() {
+    if (inGrist) {
+        try {
+            const v = await grist.getOption(CFG_KEY);
+            gristConnected = true;
+            if (v && typeof v === 'object' && Object.keys(v).length) return v;
+        } catch (e) { /* pas de parent Grist : repli localStorage */ }
+    }
+    try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch (e) { return {}; }
+}
+
+/* relations manuelles : option du widget Grist (partagée), repli localStorage */
 async function loadManual() {
     if (inGrist) {
         try {
             const v = await grist.getOption(LS_KEY);
-            gristConnected = true;   // l'appel RPC a réellement abouti : un parent Grist existe
+            gristConnected = true;
             if (Array.isArray(v)) return v;
             if (typeof v === 'string' && v) return JSON.parse(v);
-        } catch (e) { /* pas de vrai parent Grist (page ouverte hors widget) : repli localStorage */ }
+        } catch (e) {}
     }
     try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) { return []; }
 }
 function saveManual() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(manual)); } catch (e) {}
-    // grist.setOption() renvoie une Promise (rejetée hors widget Grist) : on l'intercepte
-    // avec .catch() plutôt qu'un try/catch synchrone, qui ne suffit pas pour une Promise.
-    if (inGrist) {
-        try { Promise.resolve(grist.setOption(LS_KEY, manual)).catch(() => {}); } catch (e) {}
-    }
+    if (inGrist) { try { Promise.resolve(grist.setOption(LS_KEY, manual)).catch(() => {}); } catch (e) {} }
 }
+
+/* ==================================================================== état */
+let FILES = [];            // reconstruit à chaque "Charger les données", à partir de sourceConfig
+let store = {};
+let manual = [];
+let activeId = null;
+let selectedKey = null;
+let hotSource, hotRelated, hotAll;
+
 function linkKey(a, b) { return [a, b].sort().join('||'); }
 const manualSet = () => new Set(manual.map(m => linkKey(m.a, m.b)));
-
 function fileById(id) { return FILES.find(f => f.id === id); }
+
 function rowMeta(cfg, row) {
     const salleVals = cfg.salle(row);
     const text = [row[cfg.ecCol], row[cfg.intCol], row['Commentaire']].join(' ');
@@ -491,7 +687,7 @@ function rowMeta(cfg, row) {
     };
 }
 
-/* -------------------------------------------------- relation between 2 rows */
+/* -------------------------------------------------- relation entre 2 lignes (identique à relationsCsv.html) */
 function relate(aCfg, aRow, aIdx, bCfg, bRow, bIdx, threshold) {
     if (aCfg.id === bCfg.id) return null;
     const A = rowMeta(aCfg, aRow), B = rowMeta(bCfg, bRow);
@@ -514,7 +710,6 @@ function relate(aCfg, aRow, aIdx, bCfg, bRow, bIdx, threshold) {
 
     if (s >= threshold) { reasons.push('intitulé proche'); details.push('intitulé ' + Math.round(s * 100) + '%'); score = Math.max(score, s); }
 
-    // conflit = même ressource (intervenant / salle) occupée au même créneau pour des cours différents
     const sameCourse = mutMention || s >= 0.5;
     if (overlap && (pShared.length || rShared.length) && !sameCourse) {
         reasons.unshift('conflit horaire');
@@ -530,7 +725,7 @@ function relate(aCfg, aRow, aIdx, bCfg, bRow, bIdx, threshold) {
     return { reasons, top: reasons[0], detail: details.join(' ; '), score, manual: isManual };
 }
 
-/* ------------------------------------------------------------------ render */
+/* ==================================================================== rendu (identique à relationsCsv.html) */
 const relClass = { 'conflit horaire': 'rel-conflit', 'mutualisation': 'rel-mut', 'intervenant partagé': 'rel-int',
     'salle partagée': 'rel-salle', 'intitulé proche': 'rel-ec', 'manuelle': 'rel-manuelle' };
 
@@ -551,9 +746,10 @@ function buildTabs() {
 }
 
 function renderSource() {
+    if (!activeId || !store[activeId]) return;
     const cfg = fileById(activeId), st = store[activeId];
-    document.getElementById('fileMeta').textContent = (st.path || cfg.path) + ' — ' + st.data.length + ' lignes, ' +
-        st.display.length + ' colonnes' + (st.corrige ? ' — fichier corrigé (…cor.csv)' : '');
+    document.getElementById('fileMeta').textContent = 'Table Grist : ' + st.path + ' — ' + st.data.length + ' lignes, ' +
+        st.display.length + ' colonnes' + (st.origine ? ' — table d\'origine disponible (voir 3 quater)' : '');
     const columns = st.display.map(h => ({ data: h }));
     if (hotSource) hotSource.destroy();
     hotSource = new Handsontable(document.getElementById('sourceGrid'), {
@@ -664,7 +860,6 @@ function renderAll() {
                     if (filt !== 'all' && !rel.reasons.includes(filt)) return;
                     const cA = (ra[A.jourCol] || '') + ' ' + (ra[A.debCol] || '') + '-' + (ra[A.finCol] || '');
                     const cB = (rb[B.jourCol] || '') + ' ' + (rb[B.debCol] || '') + '-' + (rb[B.finCol] || '');
-                    // dédoublonne les lignes répétées séance par séance (ex. M2 ACEHN)
                     const dedup = [A.id, ra[A.ecCol], cA, B.id, rb[B.ecCol], cB, rel.reasons.join()].join('¦');
                     if (seen.has(dedup)) return;
                     seen.add(dedup);
@@ -707,9 +902,9 @@ function renderBadges(allRows) {
     document.getElementById('badges').innerHTML = map.map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
 }
 
-/* -------------------------------------------------- référentiel intervenants */
+/* -------------------------------------------------- référentiel intervenants (identique à relationsCsv.html) */
 function buildIntervenants() {
-    const map = new Map();   // clé normalisée -> agrégat
+    const map = new Map();
     FILES.forEach(f => {
         const st = store[f.id]; if (!st) return;
         st.data.forEach(row => {
@@ -719,7 +914,7 @@ function buildIntervenants() {
             String(raw).split(/\s*[\/,]\s*| et /i).forEach(part => {
                 const vk = normName(part);
                 if (!valid.has(vk)) return;
-                const k = canonKeyOf(vk);   // regroupe les variantes sous le nom canonique du référentiel
+                const k = canonKeyOf(vk);
                 if (!map.has(k)) map.set(k, { names: new Map(), cohortes: new Set(), ecs: [], ecMap: new Map() });
                 const e = map.get(k);
                 e.names.set(part.trim(), (e.names.get(part.trim()) || 0) + 1);
@@ -729,7 +924,6 @@ function buildIntervenants() {
                 const ecKey = [f.label, ec, jour, deb, fin].join('¦');
                 let entry = e.ecMap.get(ecKey);
                 if (!entry) { entry = { file: f.label, ec, jour, deb, fin, nb, seances: 0, heures: 0 }; e.ecMap.set(ecKey, entry); e.ecs.push(entry); }
-                // toutes les lignes datées sont sommées (ex. M2 ACEHN : une ligne par séance)
                 entry.seances += nbCours(nb);
                 entry.heures = Math.round((entry.heures + heuresCours(deb, fin, nb)) * 100) / 100;
             });
@@ -746,7 +940,7 @@ function renderIntervenants() {
         if (sharedOnly && e.cohortes.size < 2) return;
         const best = [...e.names.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0];
         const canon = refIndex.canonKey.get(k);
-        const disp = canon || titleCase(best);   // nom canonique du référentiel, sinon casse corrigée
+        const disp = canon || titleCase(best);
         const statut = canon ? (refIndex.statut.get(k) || '') : 'hors référentiel';
         let conflits = 0;
         for (let i = 0; i < e.ecs.length; i++) for (let j = i + 1; j < e.ecs.length; j++) {
@@ -797,9 +991,9 @@ function renderIntervenants() {
     window.__intRows = rows;
 }
 
-/* ---------------------------------- référentiel des cours (parcours + intitulé EC) */
+/* ---------------------------------- référentiel des cours (identique à relationsCsv.html) */
 function buildCoursRef() {
-    const map = new Map();   // parcours¦ec -> agrégat
+    const map = new Map();
     FILES.forEach(f => {
         const st = store[f.id]; if (!st) return;
         st.data.forEach(row => {
@@ -858,10 +1052,9 @@ function renderCoursRef() {
     window.__coursRefRows = rows;
 }
 
-/* ---------------------------------- cohérence référentiel des cours ↔ maquette */
-const SEUIL_APPARIEMENT = 0.34;    // similarité minimale d'intitulé pour apparier
-
-const SEUIL_MUTUALISE = 0.55;   // similarité minimale pour un rapprochement inter-parcours
+/* ---------------------------------- cohérence référentiel des cours ↔ maquette (identique à relationsCsv.html) */
+const SEUIL_APPARIEMENT = 0.34;
+const SEUIL_MUTUALISE = 0.55;
 
 function coherenceStatut(c) {
     return { 'OK': 'rel-mut', 'écart de volume': 'rel-ec', 'EC mutualisé (autre parcours maquette)': 'rel-int',
@@ -873,9 +1066,8 @@ function buildCoherence() {
     const cours = window.__coursRefRows || [];
     const rows = [];
     const maqUtilisee = new Set();
-    const maqCodes = new Set(maquette.map(m => m.code).filter(Boolean));   // parcours réellement décrits
+    const maqCodes = new Set(maquette.map(m => m.code).filter(Boolean));
 
-    // couverture réelle des plannings : "CODE¦semestre"
     const couverture = new Set();
     FILES.forEach(f => {
         if (!store[f.id]) return;
@@ -884,7 +1076,6 @@ function buildCoherence() {
         (/^M1/.test(f.id) ? ['1', '2'] : ['3', '4']).forEach(s => couverture.add(code + '¦' + s));
     });
 
-    // 1. chaque EC planifié -> meilleur EC de la maquette (même parcours + niveau)
     cours.forEach(c => {
         const code = parcoursCode(c.Parcours) || parcoursCode(c['Cohorte(s)']);
         const coh = c['Cohorte(s)'] || '';
@@ -896,7 +1087,6 @@ function buildCoherence() {
         maquette.filter(m => m.code === code && memeNiveau(m))
             .forEach(m => { const s = sim(c['Intitulé EC'], m.ec); if (s > bestS) { bestS = s; best = m; } });
         let apparie = best && bestS >= SEUIL_APPARIEMENT;
-        // repli : EC mutualisé, décrit dans la maquette sous un autre parcours
         let mutualise = false;
         if (!apparie && code && maqCodes.has(code)) {
             let mB = null, mS = 0;
@@ -931,7 +1121,6 @@ function buildCoherence() {
         });
     });
 
-    // 2. EC de la maquette non retrouvés dans les plannings (seulement là où un planning existe)
     maquette.forEach(m => {
         if (!m.code || maqUtilisee.has(m)) return;
         if (!couverture.has(m.code + '¦' + m.semestre)) return;
@@ -995,7 +1184,7 @@ function renderCoherence() {
     window.__cohRows = all;
 }
 
-/* ---------------------------------- écarts fichier source (.csv) ↔ corrigé (…cor.csv) */
+/* ---------------------------------- écarts table principale ↔ table d'origine (identique à relationsCsv.html) */
 const DIFF_CHAMPS = [
     { k: 'Intitulé EC', get: (f, r) => r[f.ecCol] },
     { k: 'Intervenant', get: (f, r) => r[f.intCol] },
@@ -1038,13 +1227,12 @@ function buildDiff() {
                 Créneau: ((pb['Jour'] || pa['Jour']) + ' ' + (pb['Début'] || pa['Début']) + '-' + (pb['Fin'] || pa['Fin'])).trim(),
                 'Champs modifiés': champs.join(', '),
                 'Avant (origine)': champs.map(k => k + ' = ' + (pa[k] || '∅')).join(' ; '),
-                'Après (cor)': champs.map(k => k + ' = ' + (pb[k] || '∅')).join(' ; ')
+                'Après (principale)': champs.map(k => k + ' = ' + (pb[k] || '∅')).join(' ; ')
             });
             return true;
         };
         const norm = s => stripAccents(s).toLowerCase().replace(/\s+/g, ' ').trim();
 
-        // passe 1 : appariement strict (intitulé + jour + début), 1:1 dans l'ordre
         const bucket = new Map();
         av.forEach(p => { const s = diffSig(p); (bucket.get(s) || bucket.set(s, { a: [], b: [] }).get(s)).a.push(p); });
         ap.forEach(p => { const s = diffSig(p); (bucket.get(s) || bucket.set(s, { a: [], b: [] }).get(s)).b.push(p); });
@@ -1056,7 +1244,6 @@ function buildDiff() {
             for (let i = n; i < b.length; i++) resteB.push(b[i]);
         });
 
-        // passe 2 : rapproche les lignes restantes par intitulé proche (déplacement / renommage)
         const prisB = new Set();
         resteA.forEach(pa => {
             let jB = -1, best = 0;
@@ -1072,7 +1259,7 @@ function buildDiff() {
                     Fichier: f.label, Type: 'retirée (origine)', 'Intitulé EC': pa['Intitulé EC'],
                     Créneau: (pa['Jour'] + ' ' + pa['Début'] + '-' + pa['Fin']).trim(), 'Champs modifiés': '',
                     'Avant (origine)': ['Intervenant', 'Jour', 'Début', 'Fin', 'Nb de cours', 'Parcours', 'Commentaire'].map(k => k + ' = ' + (pa[k] || '∅')).join(' ; '),
-                    'Après (cor)': ''
+                    'Après (principale)': ''
                 });
             }
         });
@@ -1080,9 +1267,9 @@ function buildDiff() {
             if (prisB.has(j)) return;
             nAjout++;
             lignes.push({
-                Fichier: f.label, Type: 'ajoutée (cor)', 'Intitulé EC': pb['Intitulé EC'],
+                Fichier: f.label, Type: 'ajoutée (principale)', 'Intitulé EC': pb['Intitulé EC'],
                 Créneau: (pb['Jour'] + ' ' + pb['Début'] + '-' + pb['Fin']).trim(), 'Champs modifiés': '', 'Avant (origine)': '',
-                'Après (cor)': ['Intervenant', 'Jour', 'Début', 'Fin', 'Nb de cours', 'Parcours', 'Commentaire'].map(k => k + ' = ' + (pb[k] || '∅')).join(' ; ')
+                'Après (principale)': ['Intervenant', 'Jour', 'Début', 'Fin', 'Nb de cours', 'Parcours', 'Commentaire'].map(k => k + ' = ' + (pb[k] || '∅')).join(' ; ')
             });
         });
 
@@ -1090,13 +1277,13 @@ function buildDiff() {
         parFichier.push({
             Fichier: f.label,
             'Lignes origine': av.length,
-            'Lignes cor': ap.length,
+            'Lignes principale': ap.length,
             'Δ lignes': ap.length - av.length,
             'Col. origine': st.origine.headers.length,
-            'Col. cor': st.headers.length,
+            'Col. principale': st.headers.length,
             Ajoutées: nAjout, Retirées: nRetir, Modifiées: nModif,
             'Heures origine': Math.round(heures(av) * 100) / 100,
-            'Heures cor': Math.round(heures(ap) * 100) / 100,
+            'Heures principale': Math.round(heures(ap) * 100) / 100,
             'Δ heures': Math.round((heures(ap) - heures(av)) * 100) / 100
         });
     });
@@ -1108,7 +1295,6 @@ function renderDiff() {
     window.__diffSummary = parFichier;
     window.__diffLignes = lignes;
 
-    // sélecteur de fichier
     const sel = document.getElementById('diffFile');
     const cur = sel.value;
     sel.innerHTML = '<option value="all">Tous</option>' +
@@ -1119,15 +1305,15 @@ function renderDiff() {
 
     const tot = (k) => parFichier.reduce((s, p) => s + p[k], 0);
     document.getElementById('diffBadges').innerHTML = [
-        ['b-total', 'Fichiers comparés : ' + parFichier.length],
+        ['b-total', 'Sources comparées : ' + parFichier.length],
         ['b-mut', 'Lignes ajoutées : ' + tot('Ajoutées')],
         ['b-conflit', 'Lignes retirées : ' + tot('Retirées')],
         ['b-ec', 'Lignes modifiées : ' + tot('Modifiées')],
         ['b-int', 'Δ heures total : ' + Math.round(tot('Δ heures') * 100) / 100]
     ].map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
 
-    const sc = ['Fichier', 'Lignes origine', 'Lignes cor', 'Δ lignes', 'Col. origine', 'Col. cor',
-        'Ajoutées', 'Retirées', 'Modifiées', 'Heures origine', 'Heures cor', 'Δ heures'];
+    const sc = ['Fichier', 'Lignes origine', 'Lignes principale', 'Δ lignes', 'Col. origine', 'Col. principale',
+        'Ajoutées', 'Retirées', 'Modifiées', 'Heures origine', 'Heures principale', 'Δ heures'];
     if (window.__hotDiffSum) window.__hotDiffSum.destroy();
     window.__hotDiffSum = new Handsontable(document.getElementById('diffSummaryGrid'), {
         data: parFichier, colHeaders: sc, columns: sc.map(c => ({ data: c, readOnly: true })),
@@ -1135,7 +1321,7 @@ function renderDiff() {
         multiColumnSorting: true, licenseKey: 'non-commercial-and-evaluation'
     });
 
-    const dc = ['Fichier', 'Type', 'Intitulé EC', 'Créneau', 'Champs modifiés', 'Avant (origine)', 'Après (cor)'];
+    const dc = ['Fichier', 'Type', 'Intitulé EC', 'Créneau', 'Champs modifiés', 'Avant (origine)', 'Après (principale)'];
     if (window.__hotDiff) window.__hotDiff.destroy();
     window.__hotDiff = new Handsontable(document.getElementById('diffGrid'), {
         data: lignesF, colHeaders: dc, columns: dc.map(c => ({ data: c, readOnly: true })),
@@ -1146,7 +1332,7 @@ function renderDiff() {
         cells(r) {
             const rd = this.instance.getSourceDataAtRow(this.instance.toPhysicalRow(r));
             if (!rd) return {};
-            return { className: rd.Type === 'ajoutée (cor)' ? 'rel-mut'
+            return { className: rd.Type === 'ajoutée (principale)' ? 'rel-mut'
                 : rd.Type === 'retirée (origine)' ? 'rel-conflit' : 'rel-ec' };
         }
     });
@@ -1168,10 +1354,13 @@ function renderManual() {
     });
 }
 
-/* ------------------------------------------------------------------ actions */
+/* ==================================================================== actions */
 let recalcTimer;
 function debounceRecalc() { clearTimeout(recalcTimer); recalcTimer = setTimeout(recalcAll, 400); }
-function recalcAll() { renderAll(); renderRelated(); renderIntervenants(); renderCoursRef(); renderCoherence(); renderDiff(); }
+function recalcAll() {
+    if (!FILES.length) return;
+    renderAll(); renderRelated(); renderIntervenants(); renderCoursRef(); renderCoherence(); renderDiff();
+}
 
 function csvEscape(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function download(name, content, mime) {
@@ -1186,8 +1375,100 @@ function exportRelations() {
     download('relations_csv.csv', csv, 'text/csv;charset=utf-8');
 }
 
-/* ------------------------------------------------------------------ init */
+/* -------------------------------------------------- chargement effectif depuis Grist */
+async function chargerDonnees() {
+    const errBox = document.getElementById('loadError');
+    const btn = document.getElementById('loadBtn');
+    errBox.innerHTML = '';
+    btn.disabled = true;
+    try {
+        refIndex.byVariant.clear(); refIndex.canonKey.clear(); refIndex.statut.clear();
+        const refCfg = sourceConfig.REF;
+        if (refCfg && refCfg.table) {
+            const entry = await fetchTableCached(refCfg.table);
+            buildRefIndex(entry.rows.map(r => ({
+                Intervenant: gristStr(r[refCfg.cols.intervenant]),
+                Statut: gristStr(r[refCfg.cols.statut]),
+                Variantes: gristStr(r[refCfg.cols.variantes])
+            })));
+        }
+
+        maquette = [];
+        const maqCfg = sourceConfig.MAQ;
+        if (maqCfg && maqCfg.table) {
+            const entry = await fetchTableCached(maqCfg.table);
+            buildMaquette(entry.rows.map(r => ({
+                'Parcours': gristStr(r[maqCfg.cols.parcours]),
+                'Semestre': gristStr(r[maqCfg.cols.semestre]),
+                'Intitulés des UE': gristStr(r[maqCfg.cols.ue]),
+                'Code Pégase': gristStr(r[maqCfg.cols.codePegase]),
+                'Intitulés des EC': gristStr(r[maqCfg.cols.ec]),
+                "Type d'enseignement-Statut": gristStr(r[maqCfg.cols.statut]),
+                'Volume horaire Etudiant (VHE)': gristStr(r[maqCfg.cols.vhe]),
+                'Volume horaire Maquette (VHM)': gristStr(r[maqCfg.cols.vhm]),
+                'ECTS': gristStr(r[maqCfg.cols.ects]),
+                'Coeff': gristStr(r[maqCfg.cols.coeff])
+            })));
+        }
+
+        const built = [];
+        for (const src of EDT_SOURCES) {
+            const cfg = sourceConfig[src.id];
+            if (!cfg || !cfg.table) continue;
+            const entry = await fetchTableCached(cfg.table);
+            const data = entry.rows.map(r => normalizeEdtRow(cfg.cols, r));
+            const headers = ['Intitulé EC','Intervenant','Jour','Début','Fin','Nb de cours','Parcours','Commentaire','Salle'];
+            const rec = { id: src.id, path: cfg.table, data, headers };
+            if (cfg.origTable) {
+                const oEntry = await fetchTableCached(cfg.origTable);
+                rec.origine = { path: cfg.origTable, headers, data: oEntry.rows.map(r => normalizeEdtRow(cfg.cols, r)) };
+            }
+            built.push(rec);
+        }
+
+        if (!built.length) {
+            errBox.innerHTML = '<div class="error">Aucune source EDT configurée : choisissez au moins une table en section 0, ' +
+                'puis cliquez sur « Charger les données ».</div>';
+            return;
+        }
+
+        FILES = EDT_SOURCES.filter(s => built.some(b => b.id === s.id))
+            .map(s => ({ id: s.id, label: s.label, aliases: s.aliases, ...DEF,
+                salle: r => [r['Salle'], r['Commentaire']] }));
+        store = {};
+        built.forEach(r => {
+            r.display = r.headers.filter(h => r.data.some(row => row[h] !== ''));
+            store[r.id] = r;
+        });
+        activeId = FILES[0].id;
+        selectedKey = null;
+        buildTabs();
+        renderSource();
+        recalcAll();
+        errBox.innerHTML = '<div class="muted" style="padding:6px 0;">' + built.length + ' source(s) chargée(s) depuis Grist ' +
+            '(' + built.filter(b => b.origine).length + ' avec table d\'origine).</div>';
+    } catch (e) {
+        errBox.innerHTML = '<div class="error">Erreur de chargement depuis Grist : ' + escHtml(e && e.message || String(e)) + '</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function refreshTableList() {
+    try {
+        tableList = await grist.docApi.listTables();
+        const el = document.getElementById('gristStatus');
+        if (el) el.textContent = '· Widget Grist connecté — ' + tableList.length + ' table(s) trouvée(s)';
+        await renderSourcesPanel();
+    } catch (e) {
+        document.getElementById('loadError').innerHTML = '<div class="error">Erreur : ' + escHtml(e && e.message || String(e)) + '</div>';
+    }
+}
+
+/* ==================================================================== câblage des contrôles fixes */
 function wire() {
+    document.getElementById('refreshTables').addEventListener('click', refreshTableList);
+    document.getElementById('loadBtn').addEventListener('click', chargerDonnees);
     document.getElementById('threshold').addEventListener('input', e => {
         document.getElementById('thVal').textContent = e.target.value; debounceRecalc();
     });
@@ -1196,10 +1477,11 @@ function wire() {
     document.getElementById('recalc').addEventListener('click', recalcAll);
     document.getElementById('exportRel').addEventListener('click', exportRelations);
     document.getElementById('exportSource').addEventListener('click', () => {
+        if (!activeId || !store[activeId]) return;
         const st = store[activeId];
         const csv = [st.display.map(csvEscape).join(',')]
             .concat(st.data.map(r => st.display.map(h => csvEscape(r[h])).join(','))).join('\r\n');
-        download((st.path || fileById(activeId).path).split('/').pop(), csv, 'text/csv;charset=utf-8');
+        download(st.path + '.csv', csv, 'text/csv;charset=utf-8');
     });
     document.getElementById('intSharedOnly').addEventListener('change', renderIntervenants);
     document.getElementById('exportInt').addEventListener('click', () => {
@@ -1225,7 +1507,7 @@ function wire() {
     document.getElementById('diffFile').addEventListener('change', renderDiff);
     document.getElementById('exportDiff').addEventListener('click', () => {
         const rows = window.__diffLignes || [];
-        const cols = ['Fichier','Type','Intitulé EC','Créneau','Champs modifiés','Avant (origine)','Après (cor)'];
+        const cols = ['Fichier','Type','Intitulé EC','Créneau','Champs modifiés','Avant (origine)','Après (principale)'];
         const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => csvEscape(r[c])).join(','))).join('\r\n');
         download('ecarts_source_corrige.csv', csv, 'text/csv;charset=utf-8');
     });
@@ -1236,38 +1518,58 @@ function wire() {
     });
 }
 
-Promise.all([
-    d3.text(REF_PATH).then(t => buildRefIndex(t)).catch(() => null),
-    d3.text(MAQ_PATH).then(t => buildMaquette(t)).catch(() => null),
-    loadManual()
-].concat(FILES.map(loadCsvFile)))
-    .then(all => {
-        manual = all[2] || [];
-        const gristEl = document.getElementById('gristStatus');
-        if (gristEl) gristEl.textContent = gristConnected
-            ? '· Widget Grist connecté (relations manuelles synchronisées avec le document)' : '';
-        const res = all.slice(3);
-        const ok = res.filter(Boolean);
-        if (!ok.length) {
+/* ==================================================================== init */
+async function init() {
+    wire();
+    if (!inGrist) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">Cette page doit être ouverte comme <b>widget personnalisé</b> dans Grist ' +
+            '(dans un document Grist : Ajouter un widget → Personnalisé → coller l\'URL de cette page). ' +
+            'Ouverte seule, hors Grist, elle n\'a aucune table à lire — utilisez ' +
+            '<code>relationsCsv.html</code> pour la version basée sur des fichiers CSV.</div>';
+        return;
+    }
+    try { grist.ready({ requiredAccess: 'full' }); } catch (e) {}
+    try {
+        const [tables, savedCfg, savedManual] = await Promise.all([
+            grist.docApi.listTables(),
+            loadSourceConfig(),
+            loadManual()
+        ]);
+        gristConnected = true;
+        tableList = tables;
+        console.log("tableList");
+        console.log(tableList);
+        manual = savedManual;
+        sourceConfig = savedCfg;
+        console.log("sourceConfig");
+        console.log(sourceConfig);
+        const el = document.getElementById('gristStatus');
+        if (el) el.textContent = '· Widget Grist connecté — ' + tableList.length + ' table(s) trouvée(s)';
+
+        if (!Object.keys(sourceConfig).length) {
             document.getElementById('loadError').innerHTML =
-                '<div class="error">Impossible de charger les CSV. Ouvrez cette page via un serveur web ' +
-                '(les requêtes <code>file://</code> sont bloquées par le navigateur)' +
-                (inGrist ? ', et vérifiez que le dossier <code>assets/data</code> est servi à côté de ce widget (même origine, HTTPS).' : '.') +
-                '</div>';
-            return;
+                '<div class="muted" style="padding:6px 0;">Aucune configuration enregistrée : détection automatique des tables…</div>';
+            await autoDetectAll();
+            saveSourceConfig();
         }
-        ok.forEach(r => {
-            r.display = r.headers.filter(h => r.data.some(row => row[h] !== ''));
-            store[r.id] = r;
-        });
-        if (res.some(r => !r)) document.getElementById('loadError').innerHTML =
-            '<div class="error">Certains fichiers n\'ont pas pu être chargés.</div>';
-        wire();
-        buildTabs();
-        renderSource();
+        await renderSourcesPanel();
         renderManual();
-        recalcAll();
-    });
+
+        if (EDT_SOURCES.some(s => sourceConfig[s.id] && sourceConfig[s.id].table)) {
+            await chargerDonnees();
+        } else {
+            document.getElementById('loadError').innerHTML =
+                '<div class="error">Aucune table détectée automatiquement : configurez au moins une source EDT ' +
+                'en section 0 puis cliquez sur « Charger les données ».</div>';
+        }
+    } catch (e) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">Impossible de communiquer avec Grist : ' + escHtml(e && e.message || String(e)) +
+            '. Vérifiez que la page est ouverte comme widget personnalisé et que l\'accès complet au document a été autorisé.</div>';
+    }
+}
+init();
 </script>
 </body>
 </html>

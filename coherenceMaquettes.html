@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cohérence des maquettes</title>
+
+    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
+    <script src="assets/js/handsontable.full.min.js"></script>
+    <script src="assets/js/d3.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #222;
+        }
+        h1 { color: #333; margin-bottom: 4px; }
+        h2 { color: #333; font-size: 18px; margin: 18px 0 8px; }
+        .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            padding: 16px;
+            margin-bottom: 18px;
+        }
+        button {
+            background-color: #007bff; color: #fff; border: none; border-radius: 4px;
+            padding: 8px 14px; cursor: pointer; font-size: 13px;
+        }
+        button:hover { background-color: #0056b3; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #545b62; }
+        .badges { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 0; }
+        .badge {
+            display: inline-block; padding: 5px 10px; border-radius: 14px;
+            font-size: 12px; font-weight: bold; color: #fff;
+        }
+        .b-conflit { background: #dc3545; }
+        .b-mut { background: #28a745; }
+        .b-int { background: #007bff; }
+        .b-salle { background: #fd7e14; }
+        .b-ec { background: #6f42c1; }
+        .b-manuelle { background: #20c997; }
+        .b-total { background: #343a40; }
+        .legend { font-size: 12px; color: #555; margin-top: 8px; }
+        .legend span { display:inline-block; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+        .grid-wrap { overflow: auto; }
+        .hot-container { width: 100%; }
+        .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 4px; }
+        .muted { color: #888; font-size: 12px; }
+        .rel-conflit { background: #f8d7da !important; }
+        .rel-mut { background: #d4edda !important; }
+        .rel-int { background: #dbeafe !important; }
+        .rel-salle { background: #ffe8d6 !important; }
+        .rel-ec { background: #ece2f8 !important; }
+        .rel-manuelle { background: #d1f5ec !important; }
+        .rel-horsref { background: #fff3cd !important; }
+    </style>
+</head>
+<body>
+    <h1>Cohérence des maquettes</h1>
+    <p class="subtitle">
+        Rapproche <code>assets/data/EDT_26-27/HNmaquetteLMD5ListeEC.csv</code> (export LMD5 utilisé pour les
+        emplois du temps) et les maquettes détaillées <code>assets/data/Maquettes/*.csv</code> (export de
+        l'arborescence Formation → Année → Semestre → UE → EC), pour repérer les écarts d'ECTS, de statut
+        (obligatoire/facultatif) et les EC présents d'un seul côté.
+    </p>
+
+    <div id="loadError"></div>
+    <div class="card" id="sourcesCard">
+        <h2>Sources chargées</h2>
+        <div class="badges" id="sourcesBadges"></div>
+    </div>
+
+    <div class="card">
+        <h2>1. Cohérence au niveau des EC</h2>
+        <p class="muted">
+            Appariement par code Pégase quand il est renseigné des deux côtés (fiable), sinon par intitulé le
+            plus proche au sein du même parcours + semestre (repli inter-parcours pour les EC mutualisés).
+        </p>
+        <div class="badges" id="ecBadges"></div>
+        <div class="legend" style="margin-top:6px;">
+            <span class="rel-mut">OK</span>
+            <span class="rel-ec">écart ECTS</span>
+            <span class="rel-int">écart statut / EC mutualisé (autre parcours)</span>
+            <span class="rel-conflit">absent d'un des deux côtés</span>
+            <span class="rel-horsref">parcours absent de HNmaquette LMD5</span>
+        </div>
+        <label style="font-size:12px;color:#555;display:block;margin-top:8px;">
+            <input type="checkbox" id="ecHideOk"> Masquer les lignes cohérentes (OK)
+        </label>
+        <div class="grid-wrap" style="margin-top:10px;"><div id="ecGrid" class="hot-container" style="height: 440px;"></div></div>
+        <button class="secondary" id="exportEc" style="margin-top:8px;">Exporter (CSV)</button>
+    </div>
+
+    <div class="card">
+        <h2>2. Cohérence au niveau des UE (total ECTS)</h2>
+        <p class="muted">
+            Pour chaque UE de la maquette détaillée : comparaison de son ECTS déclaré avec la somme des ECTS
+            des EC correspondants dans HNmaquette LMD5 (même parcours + semestre, UE la plus ressemblante).
+        </p>
+        <div class="badges" id="ueBadges"></div>
+        <label style="font-size:12px;color:#555;display:block;margin-top:8px;">
+            <input type="checkbox" id="ueHideOk"> Masquer les lignes cohérentes (OK)
+        </label>
+        <div class="grid-wrap" style="margin-top:10px;"><div id="ueGrid" class="hot-container" style="height: 360px;"></div></div>
+        <button class="secondary" id="exportUe" style="margin-top:8px;">Exporter (CSV)</button>
+    </div>
+
+<script>
+/* ------------------------------------------------------------------ config */
+const HN_PATH = 'assets/data/EDT_26-27/HNmaquetteLMD5ListeEC.csv';
+const MAQ_FILES = [
+    { file: 'ACEHN2', label: 'ACEHN (M2)' },
+    { file: 'CEN1',   label: 'CEN (M1)' },
+    { file: 'CEN2',   label: 'CEN (M2)' },
+    { file: 'MCPN1',  label: 'MCPN (M1)' },
+    { file: 'MCPN2',  label: 'MCPN (M2)' },
+    { file: 'MSI1',   label: 'MSI (M1)' },
+    { file: 'MSI2',   label: 'MSI (M2)' },
+    { file: 'NET1',   label: 'NET (M1)' },
+    { file: 'NET2',   label: 'NET (M2)' },
+    { file: 'THYP2',  label: 'THYP (M2)' }
+].map(f => ({ ...f, code: f.file.replace(/\d+$/, ''), path: 'assets/data/Maquettes/' + f.file + '.csv' }));
+
+const SEUIL_EC = 0.34;       // similarité minimale pour apparier un EC par intitulé
+const SEUIL_EC_MUT = 0.55;   // seuil (plus strict) pour un rapprochement inter-parcours (mutualisation)
+
+/* ------------------------------------------------------------------ helpers */
+const stripAccents = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function parseCSV(text) {
+    const rows = d3.csvParseRows(text);
+    let headers = rows[0].map((h, i) => (h || '').trim() || ('col' + i));
+    const seen = {};
+    headers = headers.map(h => { if (seen[h] != null) { seen[h]++; return h + '_' + seen[h]; } seen[h] = 0; return h; });
+    const data = rows.slice(1)
+        .filter(r => r.some(c => (c || '').trim() !== ''))
+        .map(r => { const o = {}; headers.forEach((h, i) => o[h] = r[i] != null ? r[i].trim() : ''); return o; });
+    return { headers, data };
+}
+
+/* nombre "à la française" ("30,0" -> 30) */
+function numFR(v) {
+    const n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : null;
+}
+
+function tokset(s, loose) {
+    s = stripAccents(s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9\s]/g, ' ');
+    const stop = new Set(['de','du','des','la','le','les','et','en','a','aux','au','d','l','ec','ec1','ec2','ec3','ec4','pratique','theorie','cours','atelier','intro','introduction']);
+    return new Set(s.split(/\s+/).filter(t => loose ? t.length > 1 : (t.length > 2 && !stop.has(t))));
+}
+function sim(a, b) {
+    let A = tokset(a), B = tokset(b);
+    if (!A.size || !B.size) { A = tokset(a, true); B = tokset(b, true); }   // repli : intitulés très courts (« 3D », « UI »…)
+    if (!A.size || !B.size) return 0;
+    let inter = 0; A.forEach(t => B.has(t) && inter++);
+    return inter / Math.max(A.size, B.size);
+}
+function normLabel(s) { return stripAccents(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+/* "Obligatoire (O)" / "Facultatif (F)" / "Obligatoire à choix (X)" -> 'O'/'F'/'X' ; texte imprévu -> '' */
+function normStatut(s) {
+    s = String(s || '');
+    if (/obligatoire\s*à\s*choix/i.test(s) || /\(X\)/i.test(s)) return 'X';
+    if (/^\s*facultatif/i.test(s) || /\(F\)/.test(s)) return 'F';
+    if (/^\s*obligatoire/i.test(s) || /\(O\)/.test(s)) return 'O';
+    return '';
+}
+function statutLabel(s) { return { O: 'Obligatoire', F: 'Facultatif', X: 'Oblig. à choix' }[s] || ''; }
+
+/* lignes "conteneur" de la maquette LMD5 (pas de vrai EC) */
+const HN_CONTAINER = /^\s*(choisir|ue au choix|ue \d|choix|\s*)$|parmi/i;
+/* code parcours normalisé pour les libellés de la maquette LMD5 */
+function hnParcoursCode(s) {
+    const t = stripAccents(String(s || '')).toLowerCase();
+    if (/analyse et conception|\bacehn\b/.test(t)) return 'ACEHN';
+    if (/creation et exp|\bcen\b/.test(t)) return 'CEN';
+    if (/management strat|\bmsi\b|\bgsi\b/.test(t)) return 'MSI';
+    if (/enjeux|\bnet\d*\b/.test(t)) return 'NET';
+    if (/patrimoine|\bmcpn\b/.test(t)) return 'MCPN';
+    if (/hypermedia|\bthyp\b/.test(t)) return 'THYP';
+    return null;
+}
+
+function csvEscape(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function download(name, content, mime) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ------------------------------------------------------------------ chargement + normalisation */
+let hnEc = [];       // EC de la maquette LMD5
+let maqEc = [];      // EC des maquettes détaillées
+let maqUe = [];      // UE des maquettes détaillées
+let couverture = new Set();   // "CODE¦semestre" réellement chargés côté maquettes détaillées
+
+/* Certaines sections de HNmaquetteLMD5ListeEC.csv (ex. parcours MCPN) présentent un décalage
+   d'une colonne à partir de "Intitulés des EC" (une cellule manquante en amont a poussé tout le
+   reste de la ligne d'un cran). On ne corrige QUE le motif net et sans ambiguïté : "Intitulés des
+   EC" vide ou purement numérique, et la colonne suivante qui ressemble à un vrai intitulé d'EC. */
+function looksLikeMissingEc(v) {
+    v = String(v || '').trim();
+    return !v || /^\d+([.,]\d+)?$/.test(v);
+}
+function fixColumnShift(headers, row) {
+    if (!looksLikeMissingEc(row['Intitulés des EC'])) return row;
+    const next = row["Type d'enseignement-Statut"];
+    if (!next || /^(obligatoire|facultatif)\b/i.test(next)) return row;   // motif non reconnu : on ne touche à rien
+    const idxStart = headers.indexOf('Intitulés des EC');
+    const fixed = { ...row, _decale: true };
+    for (let i = idxStart; i < headers.length - 1; i++) fixed[headers[i]] = row[headers[i + 1]];
+    fixed['Code Pégase'] = '';   // valeur d'origine, non fiable sur les lignes décalées
+    return fixed;
+}
+
+function buildHnEc(headers, data) {
+    let nDecale = 0;
+    const rows = data.map(raw => {
+        const r = fixColumnShift(headers, raw);
+        if (r._decale) nDecale++;
+        const ec = (r['Intitulés des EC'] || '').trim();
+        if (!ec || HN_CONTAINER.test(ec)) return null;
+        return {
+            parcours: (r['Parcours'] || '').trim(),
+            code: hnParcoursCode(r['Parcours']),
+            semestre: (r['Semestre'] || '').trim(),
+            ue: (r['Intitulés des UE'] || '').trim(),
+            codePegase: (r['Code Pégase'] || '').trim(),
+            ec,
+            statut: normStatut(r["Type d'enseignement-Statut"]),
+            ects: numFR(r['ECTS']),
+            vhe: numFR(r['Volume horaire Etudiant (VHE)']),
+            vhm: numFR(r['Volume horaire Maquette (VHM)']),
+            decale: !!r._decale
+        };
+    }).filter(Boolean);
+    rows.nDecale = nDecale;
+    return rows;
+}
+
+function buildMaqRows(code, data) {
+    const semRe = /semestre\s*(\d)/i;
+    return data.map(r => {
+        const m = semRe.exec(r['Semestre'] || '');
+        return {
+            code, type: (r['Type'] || '').trim(), semestre: m ? m[1] : '',
+            formation: r['Formation'] || '', annee: r['Année'] || '',
+            ue: (r['UE'] || '').trim(), ecChoix: r['EC à choix'] || '', groupe: r['Groupe'] || '',
+            codePegase: (r['Code'] || '').trim(), libelle: (r['Libellé'] || '').trim(),
+            ects: numFR(r['ECTS']), statut: (r['Statut'] || '').trim(),
+            mutualise: r['Mutualisé'] === 'Oui'
+        };
+    });
+}
+
+/* getLabel(c) plutôt qu'un clone avec _label : on garde l'objet ORIGINAL (nécessaire pour que
+   hnUsed.add(hn) marque bien la même référence que celle parcourue ensuite dans hnEc.forEach) */
+function bestMatch(cands, label, getLabel) {
+    let best = null, bestS = 0;
+    cands.forEach(c => { const s = sim(label, getLabel(c)); if (s > bestS) { bestS = s; best = c; } });
+    return { best, score: bestS };
+}
+
+/* ------------------------------------------------------------------ cohérence EC */
+function buildHnByCode() {
+    const map = new Map();
+    hnEc.forEach(e => {
+        if (e.codePegase && e.codePegase !== '1' && !map.has(e.codePegase)) map.set(e.codePegase, e);
+    });
+    return map;
+}
+
+function buildEcCoherence() {
+    const hnByCode = buildHnByCode();
+    const hnCodesPresent = new Set(hnEc.map(e => e.code).filter(Boolean));
+    const hnUsed = new Set();
+    const rows = [];
+
+    maqEc.forEach(m => {
+        let statut, hn = null, matchType = '', score = 0, mutualiseAutre = false;
+        if (!hnCodesPresent.has(m.code)) {
+            statut = 'parcours absent de HNmaquette LMD5';
+        } else {
+            if (m.codePegase && m.codePegase !== '1' && hnByCode.has(m.codePegase)) {
+                hn = hnByCode.get(m.codePegase); matchType = 'code Pégase'; score = 1;
+            }
+            if (!hn) {
+                const cands = hnEc.filter(e => e.code === m.code && e.semestre === m.semestre);
+                const r = bestMatch(cands, m.libelle, e => e.ec);
+                if (r.best && r.score >= SEUIL_EC) { hn = r.best; matchType = 'intitulé'; score = r.score; }
+            }
+            if (!hn) {
+                const cands2 = hnEc.filter(e => e.code !== m.code && e.semestre === m.semestre);
+                const r2 = bestMatch(cands2, m.libelle, e => e.ec);
+                if (r2.best && r2.score >= SEUIL_EC_MUT) { hn = r2.best; matchType = 'intitulé (autre parcours)'; score = r2.score; mutualiseAutre = true; }
+            }
+            if (!hn) {
+                statut = 'EC absent de HNmaquette';
+            } else if (matchType === 'code Pégase' && hn.semestre !== m.semestre) {
+                statut = 'écart semestre (code Pégase identique)';
+            } else {
+                hnUsed.add(hn);
+                const ecartStatut = m.statut && hn.statut && m.statut !== hn.statut;
+                const ecartEcts = (m.ects != null && hn.ects != null) ? Math.round((m.ects - hn.ects) * 100) / 100 : null;
+                if (mutualiseAutre) statut = 'EC mutualisé (autre parcours HN)';
+                else if (ecartEcts != null && Math.abs(ecartEcts) > 0.01) statut = 'écart ECTS';
+                else if (ecartStatut) statut = 'écart statut';
+                else statut = 'OK';
+            }
+        }
+        const ecart = (hn && m.ects != null && hn.ects != null) ? Math.round((m.ects - hn.ects) * 100) / 100 : '';
+        rows.push({
+            Parcours: m.code, Sem: m.semestre,
+            'UE (détaillée)': m.ue, 'EC (détaillée)': m.libelle, 'Code (détaillée)': m.codePegase,
+            'ECTS (détaillée)': m.ects == null ? '' : m.ects, 'Statut (détaillée)': statutLabel(m.statut),
+            'Mutualisé (détaillée)': m.mutualise ? 'Oui' : 'Non',
+            'UE (LMD5)': hn ? hn.ue : '', 'EC (LMD5)': hn ? hn.ec : '', 'Code Pégase (LMD5)': hn ? hn.codePegase : '',
+            'ECTS (LMD5)': hn && hn.ects != null ? hn.ects : '', 'Statut (LMD5)': hn ? statutLabel(hn.statut) : '',
+            'Écart ECTS': ecart, Appariement: hn ? matchType : '', 'Sim %': hn ? Math.round(score * 100) : '',
+            Cohérence: statut
+        });
+    });
+
+    hnEc.forEach(e => {
+        if (hnUsed.has(e)) return;
+        if (!couverture.has(e.code + '¦' + e.semestre)) return;   // pas de maquette détaillée chargée pour ce parcours+semestre
+        rows.push({
+            Parcours: e.code, Sem: e.semestre,
+            'UE (détaillée)': '', 'EC (détaillée)': '', 'Code (détaillée)': '', 'ECTS (détaillée)': '', 'Statut (détaillée)': '', 'Mutualisé (détaillée)': '',
+            'UE (LMD5)': e.ue, 'EC (LMD5)': e.ec, 'Code Pégase (LMD5)': e.codePegase,
+            'ECTS (LMD5)': e.ects == null ? '' : e.ects, 'Statut (LMD5)': statutLabel(e.statut),
+            'Écart ECTS': '', Appariement: '', 'Sim %': '',
+            Cohérence: 'EC de HNmaquette non retrouvé dans les maquettes détaillées'
+        });
+    });
+
+    rows.sort((a, b) => a.Parcours.localeCompare(b.Parcours) || a.Sem.localeCompare(b.Sem) ||
+        a.Cohérence.localeCompare(b.Cohérence));
+    return rows;
+}
+
+const ecStatutClass = {
+    'OK': 'rel-mut', 'écart ECTS': 'rel-ec', 'écart statut': 'rel-int', 'EC mutualisé (autre parcours HN)': 'rel-int',
+    'EC absent de HNmaquette': 'rel-conflit', 'EC de HNmaquette non retrouvé dans les maquettes détaillées': 'rel-conflit',
+    'parcours absent de HNmaquette LMD5': 'rel-horsref', 'écart semestre (code Pégase identique)': 'rel-salle'
+};
+
+function renderEc() {
+    const all = buildEcCoherence();
+    window.__ecRows = all;
+    const hideOk = document.getElementById('ecHideOk').checked;
+    const rows = hideOk ? all.filter(r => r.Cohérence !== 'OK') : all;
+
+    const n = k => all.filter(r => r.Cohérence === k).length;
+    const apparies = all.filter(r => r['EC (détaillée)'] && r['EC (LMD5)']).length;
+    const cotesDetaillee = all.filter(r => r['EC (détaillée)']).length;
+    const taux = cotesDetaillee ? Math.round(apparies / cotesDetaillee * 100) : 0;
+    document.getElementById('ecBadges').innerHTML = [
+        ['b-total', 'EC (détaillées) : ' + cotesDetaillee],
+        ['b-mut', 'Appariés : ' + apparies + ' (' + taux + '%)'],
+        ['b-ec', 'Écarts ECTS : ' + n('écart ECTS')],
+        ['b-int', 'Écarts statut / mutualisés : ' + (n('écart statut') + n('EC mutualisé (autre parcours HN)'))],
+        ['b-conflit', 'Absents (un seul côté) : ' + (n('EC absent de HNmaquette') + n('EC de HNmaquette non retrouvé dans les maquettes détaillées'))],
+        ['b-manuelle', 'Parcours absents de HNmaquette : ' + n('parcours absent de HNmaquette LMD5')]
+    ].map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
+
+    const cols = ['Parcours','Sem','UE (détaillée)','EC (détaillée)','Code (détaillée)','ECTS (détaillée)','Statut (détaillée)','Mutualisé (détaillée)',
+        'UE (LMD5)','EC (LMD5)','Code Pégase (LMD5)','ECTS (LMD5)','Statut (LMD5)','Écart ECTS','Appariement','Sim %','Cohérence'];
+    if (window.__hotEc) window.__hotEc.destroy();
+    window.__hotEc = new Handsontable(document.getElementById('ecGrid'), {
+        data: rows, colHeaders: cols, rowHeaders: true,
+        columns: cols.map(c => ({ data: c, readOnly: true })),
+        colWidths: [70, 40, 190, 220, 100, 65, 90, 75, 190, 220, 100, 65, 90, 65, 130, 50, 300],
+        height: 440, manualColumnResize: true, autoWrapRow: false,
+        filters: true, dropdownMenu: true, multiColumnSorting: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        cells(r) {
+            const rd = this.instance.getSourceDataAtRow(this.instance.toPhysicalRow(r));
+            return rd ? { className: ecStatutClass[rd.Cohérence] || '' } : {};
+        }
+    });
+}
+
+/* ------------------------------------------------------------------ cohérence UE */
+function buildHnUeAgg() {
+    const map = new Map();
+    hnEc.forEach(e => {
+        if (!e.code) return;
+        const key = e.code + '¦' + e.semestre + '¦' + normLabel(e.ue);
+        if (!map.has(key)) map.set(key, { code: e.code, semestre: e.semestre, ue: e.ue, ectsSum: 0, nbEc: 0 });
+        const a = map.get(key);
+        a.ectsSum = Math.round((a.ectsSum + (e.ects || 0)) * 100) / 100;
+        a.nbEc++;
+    });
+    return [...map.values()];
+}
+
+function buildUeCoherence() {
+    const hnUeAgg = buildHnUeAgg();
+    const hnCodesPresent = new Set(hnEc.map(e => e.code).filter(Boolean));
+    const rows = [];
+    maqUe.forEach(u => {
+        let statut, best = null, score = 0;
+        if (!hnCodesPresent.has(u.code)) {
+            statut = 'parcours absent de HNmaquette LMD5';
+        } else {
+            const cands = hnUeAgg.filter(h => h.code === u.code && h.semestre === u.semestre);
+            const r = bestMatch(cands, u.libelle, h => h.ue);
+            if (r.best && r.score >= SEUIL_EC) { best = r.best; score = r.score; }
+            statut = !best ? 'UE absente de HNmaquette' :
+                (u.ects != null && Math.abs(Math.round((u.ects - best.ectsSum) * 100) / 100) > 0.01) ? 'écart ECTS UE' : 'OK';
+        }
+        rows.push({
+            Parcours: u.code, Sem: u.semestre, 'UE (détaillée)': u.libelle,
+            'ECTS UE (détaillée)': u.ects == null ? '' : u.ects, 'Statut (détaillée)': statutLabel(u.statut),
+            'UE (LMD5, meilleure corresp.)': best ? best.ue : '', 'Σ ECTS EC (LMD5)': best ? best.ectsSum : '',
+            'Nb EC (LMD5)': best ? best.nbEc : '',
+            'Écart ECTS': (best && u.ects != null) ? Math.round((u.ects - best.ectsSum) * 100) / 100 : '',
+            'Sim %': best ? Math.round(score * 100) : '', Cohérence: statut
+        });
+    });
+    rows.sort((a, b) => a.Parcours.localeCompare(b.Parcours) || a.Sem.localeCompare(b.Sem) || a.Cohérence.localeCompare(b.Cohérence));
+    return rows;
+}
+
+const ueStatutClass = { 'OK': 'rel-mut', 'écart ECTS UE': 'rel-ec', 'UE absente de HNmaquette': 'rel-conflit',
+    'parcours absent de HNmaquette LMD5': 'rel-horsref' };
+
+function renderUe() {
+    const all = buildUeCoherence();
+    window.__ueRows = all;
+    const hideOk = document.getElementById('ueHideOk').checked;
+    const rows = hideOk ? all.filter(r => r.Cohérence !== 'OK') : all;
+
+    const n = k => all.filter(r => r.Cohérence === k).length;
+    document.getElementById('ueBadges').innerHTML = [
+        ['b-total', 'UE (détaillées) : ' + all.length],
+        ['b-mut', 'OK : ' + n('OK')],
+        ['b-ec', 'Écarts ECTS UE : ' + n('écart ECTS UE')],
+        ['b-conflit', 'UE absentes de HNmaquette : ' + n('UE absente de HNmaquette')],
+        ['b-manuelle', 'Parcours absents de HNmaquette : ' + n('parcours absent de HNmaquette LMD5')]
+    ].map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
+
+    const cols = ['Parcours','Sem','UE (détaillée)','ECTS UE (détaillée)','Statut (détaillée)',
+        'UE (LMD5, meilleure corresp.)','Σ ECTS EC (LMD5)','Nb EC (LMD5)','Écart ECTS','Sim %','Cohérence'];
+    if (window.__hotUe) window.__hotUe.destroy();
+    window.__hotUe = new Handsontable(document.getElementById('ueGrid'), {
+        data: rows, colHeaders: cols, rowHeaders: true,
+        columns: cols.map(c => ({ data: c, readOnly: true })),
+        colWidths: [70, 40, 220, 80, 90, 260, 90, 70, 65, 55, 220],
+        height: 360, manualColumnResize: true, autoWrapRow: false,
+        filters: true, dropdownMenu: true, multiColumnSorting: true,
+        licenseKey: 'non-commercial-and-evaluation',
+        cells(r) {
+            const rd = this.instance.getSourceDataAtRow(this.instance.toPhysicalRow(r));
+            return rd ? { className: ueStatutClass[rd.Cohérence] || '' } : {};
+        }
+    });
+}
+
+/* ------------------------------------------------------------------ init */
+function wire() {
+    document.getElementById('ecHideOk').addEventListener('change', renderEc);
+    document.getElementById('ueHideOk').addEventListener('change', renderUe);
+    document.getElementById('exportEc').addEventListener('click', () => {
+        const rows = window.__ecRows || [];
+        const cols = ['Parcours','Sem','UE (détaillée)','EC (détaillée)','Code (détaillée)','ECTS (détaillée)','Statut (détaillée)','Mutualisé (détaillée)',
+            'UE (LMD5)','EC (LMD5)','Code Pégase (LMD5)','ECTS (LMD5)','Statut (LMD5)','Écart ECTS','Appariement','Sim %','Cohérence'];
+        const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => csvEscape(r[c])).join(','))).join('\r\n');
+        download('coherence_ec.csv', csv, 'text/csv;charset=utf-8');
+    });
+    document.getElementById('exportUe').addEventListener('click', () => {
+        const rows = window.__ueRows || [];
+        const cols = ['Parcours','Sem','UE (détaillée)','ECTS UE (détaillée)','Statut (détaillée)',
+            'UE (LMD5, meilleure corresp.)','Σ ECTS EC (LMD5)','Nb EC (LMD5)','Écart ECTS','Sim %','Cohérence'];
+        const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => csvEscape(r[c])).join(','))).join('\r\n');
+        download('coherence_ue.csv', csv, 'text/csv;charset=utf-8');
+    });
+}
+
+Promise.all([
+    d3.text(HN_PATH).then(t => parseCSV(t)).catch(() => null),
+    ...MAQ_FILES.map(f => d3.text(f.path).then(t => ({ f, ...parseCSV(t) })).catch(() => null))
+]).then(all => {
+    const hnRes = all[0];
+    const maqRes = all.slice(1);
+    const errors = [];
+    if (!hnRes) errors.push('Impossible de charger ' + HN_PATH + '.');
+    const okMaq = maqRes.filter(Boolean);
+    const missing = MAQ_FILES.filter((f, i) => !maqRes[i]);
+    if (missing.length) errors.push('Fichiers introuvables : ' + missing.map(f => f.path).join(', ') + '.');
+    if (errors.length) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">' + errors.join('<br>') +
+            (hnRes ? '' : ' Ouvrez cette page via un serveur web (les requêtes <code>file://</code> sont bloquées par le navigateur).') +
+            '</div>';
+    }
+    if (!hnRes || !okMaq.length) return;
+
+    hnEc = buildHnEc(hnRes.headers, hnRes.data);
+
+    maqEc = []; maqUe = [];
+    okMaq.forEach(({ f, data }) => {
+        const rows = buildMaqRows(f.code, data);
+        rows.forEach(r => { if (r.semestre) couverture.add(r.code + '¦' + r.semestre); });
+        rows.filter(r => r.type === 'EC' && r.libelle).forEach(r => maqEc.push(r));
+        rows.filter(r => r.type === 'UE' && r.libelle).forEach(r => maqUe.push(r));
+    });
+
+    const badgeList = [
+        ['b-total', 'HNmaquette LMD5 : ' + hnEc.length + ' EC'],
+        ['b-int', 'Maquettes détaillées : ' + okMaq.length + '/' + MAQ_FILES.length + ' fichiers, ' + maqEc.length + ' EC, ' + maqUe.length + ' UE']
+    ];
+    if (hnEc.nDecale) badgeList.push(['b-ec', hnEc.nDecale + ' lignes HNmaquette avec décalage de colonnes corrigé']);
+    document.getElementById('sourcesBadges').innerHTML =
+        badgeList.map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
+
+    wire();
+    renderEc();
+    renderUe();
+});
+</script>
+</body>
+</html>

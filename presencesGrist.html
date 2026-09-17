@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feuille de présence</title>
+
+    <!-- API du custom widget Grist : cette page N'A DE SENS QUE dans l'iframe d'un widget Grist —
+         toutes les données (parcours, promotions, cours, étudiants, présences) proviennent de
+         tables du document via grist.docApi. -->
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #222;
+        }
+        h1 { color: #333; margin-bottom: 4px; }
+        h2 { color: #333; font-size: 18px; margin: 0 0 8px; }
+        .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            padding: 16px;
+            margin-bottom: 18px;
+        }
+        button {
+            background-color: #007bff; color: #fff; border: none; border-radius: 4px;
+            padding: 8px 14px; cursor: pointer; font-size: 13px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { opacity: .55; cursor: default; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #545b62; }
+        button.present { background-color: #28a745; }
+        button.present:hover { background-color: #1e7e34; }
+        .muted { color: #888; font-size: 12px; }
+        .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 4px; }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+
+        .steps { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 6px; }
+        .step { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #555; min-width: 200px; }
+        .step select { padding: 6px; font-size: 13px; }
+
+        .src-row { margin-bottom: 8px; border: 1px solid #e2e2e2; border-radius: 6px; padding: 8px 12px; }
+        .src-row summary { font-weight: normal; font-size: 13px; cursor: pointer; }
+        .src-row summary code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; }
+        .src-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+        .src-field { display: flex; flex-direction: column; font-size: 12px; color: #555; gap: 4px; min-width: 160px; }
+        .src-field select { padding: 4px; }
+
+        .summary-line { font-size: 13px; color: #333; margin: 4px 0 12px; }
+        .summary-line b { color: #28a745; }
+
+        .students-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 14px;
+        }
+        .student-card {
+            border: 1px solid #e2e2e2; border-radius: 8px; padding: 12px;
+            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+            background: #fafafa;
+        }
+        .student-card.is-present { border-color: #28a745; background: #f2fbf4; }
+        .avatar {
+            width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+            background: #ddd; display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: bold; color: #666;
+        }
+        .student-name { font-weight: bold; font-size: 14px; }
+        .student-meta { font-size: 12px; color: #666; }
+        .student-meta a { color: #007bff; text-decoration: none; }
+        .presence-btn { width: 100%; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Feuille de présence</h1>
+    <p class="subtitle">
+        Vérifie la présence des étudiants d'une promotion à un cours : choisir le parcours, la promotion et le
+        cours, puis cliquer sur le bouton de présence de chaque étudiant présent.
+        <span id="gristStatus" class="muted" style="margin-left:8px;"></span>
+    </p>
+
+    <div id="loadError"></div>
+
+    <details class="card" id="configCard">
+        <summary style="cursor:pointer;"><h2 style="display:inline;">Configuration des tables</h2></summary>
+        <p class="muted">
+            Association des tables « parcours », « promotions » et « cours » du document, et de leurs colonnes
+            (détectée automatiquement, à corriger si besoin). La configuration est enregistrée comme option du
+            widget (partagée entre les utilisateurs du document).
+        </p>
+        <div class="toolbar">
+            <button class="secondary" id="refreshTables">Actualiser la liste des tables</button>
+        </div>
+        <div id="staticSourcesPanel"></div>
+    </details>
+
+    <div class="card">
+        <h2>Prise de présence</h2>
+        <div class="steps">
+            <label class="step">1. Parcours
+                <select id="selParcours"><option value="">— choisir —</option></select>
+            </label>
+            <label class="step">2. Promotion
+                <select id="selPromotion" disabled><option value="">— choisir un parcours —</option></select>
+            </label>
+            <label class="step">3. Cours
+                <select id="selCours" disabled><option value="">— choisir une promotion —</option></select>
+            </label>
+            <div class="step">
+                <span>&nbsp;</span>
+                <button id="loadStudentsBtn" disabled>3. Afficher les étudiants</button>
+            </div>
+        </div>
+
+        <details id="dynMappingDetails" style="display:none;margin-top:10px;">
+            <summary style="cursor:pointer;font-size:13px;">Tables et colonnes utilisées pour cette promotion</summary>
+            <div id="dynSourcesPanel"></div>
+        </details>
+
+        <div id="summaryLine" class="summary-line"></div>
+        <div id="studentsGrid" class="students-grid"></div>
+    </div>
+
+<script>
+/* ==================================================================== intégration Grist (custom widget) */
+// Cette page n'a de sens QUE dans l'iframe d'un widget Grist : elle ne lit/n'écrit que des tables du
+// document via grist.docApi. Pour la déployer :
+//  - servir ce fichier en HTTPS (http://localhost en dev) ;
+//  - le serveur ne doit pas envoyer de X-Frame-Options / CSP frame-ancestors bloquant l'iframe ;
+//  - dans Grist : Ajouter un widget → Personnalisé → coller l'URL de cette page ;
+//  - accepter l'accès complet (« full ») demandé : nécessaire pour lire/écrire les tables par nom
+//    (grist.docApi.listTables / fetchTable / applyUserActions) et pour afficher les photos jointes
+//    (grist.docApi.getAccessToken).
+const inGrist = typeof grist !== 'undefined' && window.self !== window.top;
+let gristConnected = false;
+if (inGrist) {
+    try { grist.ready({ requiredAccess: 'full' }); } catch (e) { console.log(e); }
+}
+
+/* ------------------------------------------------------------------ utilitaires génériques */
+const stripAccents = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+function normColId(s) { return stripAccents(String(s || '')).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function gristStr(v) {
+    if (v == null) return '';
+    if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+    if (Array.isArray(v)) return v.slice(1).filter(x => x != null).join(', ');   // ex. Choice/Reference List : ['L', a, b]
+    return String(v).trim();
+}
+/* id(s) de pièce(s) jointe(s) d'une cellule "Attachments" : encodée comme une Reference List (['L', id, ...]) */
+function firstAttachmentId(v) {
+    if (Array.isArray(v)) { const ids = v.slice(1).filter(x => typeof x === 'number'); return ids[0] || null; }
+    if (typeof v === 'number') return v;
+    return null;
+}
+function bestColMatch(cols, synonyms) {
+    let best = '', bestScore = 0;
+    cols.forEach(c => {
+        const nc = normColId(c);
+        synonyms.forEach(syn => {
+            const ns = normColId(syn);
+            if (!ns) return;
+            let score = 0;
+            if (nc === ns) score = 100;
+            else if (nc.includes(ns)) score = 80 - Math.abs(nc.length - ns.length);
+            else if (ns.includes(nc)) score = 60 - Math.abs(nc.length - ns.length);
+            if (score > bestScore) { bestScore = score; best = c; }
+        });
+    });
+    return bestScore >= 40 ? best : '';
+}
+function autoGuessCols(cols, fields) {
+    const out = {};
+    fields.forEach(f => { out[f.key] = bestColMatch(cols, f.syn); });
+    return out;
+}
+function isSameLocalDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+/* accepte un timestamp Grist Date/DateTime (secondes depuis epoch) ou une chaîne ISO/texte */
+function parseTimestamp(v) {
+    if (v == null || v === '') return null;
+    if (typeof v === 'number') return new Date(v * 1000);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+/* ------------------------------------------------------------------ schéma attendu */
+const PARCOURS_FIELDS = [
+    { key: 'code', label: 'Code', syn: ['code'] },
+    { key: 'label', label: 'Libellé', syn: ['label', 'libelle', 'intitule', 'nom'] },
+];
+const PROMOTIONS_FIELDS = [
+    { key: 'code', label: 'Code', syn: ['code'] },
+    { key: 'parcours', label: 'Parcours', syn: ['parcours', 'codeparcours'] },
+    { key: 'annee', label: 'Année', syn: ['annee', 'anneeuniversitaire', 'promoannee'] },
+];
+const COURS_FIELDS = [
+    { key: 'code', label: 'Code', syn: ['code'] },
+    { key: 'label', label: 'Libellé', syn: ['label', 'libelle', 'intitule', 'nom'] },
+    { key: 'parcours', label: 'Parcours', syn: ['parcours', 'codeparcours'] },
+];
+const ETUD_FIELDS = [
+    { key: 'nom', label: 'Nom', syn: ['nom'] },
+    { key: 'prenom', label: 'Prénom', syn: ['prenom'] },
+    { key: 'mail', label: 'Mail', syn: ['mail', 'email', 'courriel'] },
+    { key: 'numEtudiant', label: 'N° étudiant', syn: ['numetudiant', 'numeroetudiant', 'netudiant', 'matricule'] },
+    { key: 'github', label: 'Compte GitHub', syn: ['comptegithub', 'github'] },
+    { key: 'photo', label: 'Photo', syn: ['photo', 'photos'] },
+];
+const PRES_FIELDS = [
+    { key: 'numEtudiant', label: 'N° étudiant', syn: ['numetudiant', 'numeroetudiant', 'netudiant', 'matricule'] },
+    { key: 'nom', label: 'Nom', syn: ['nom'] },
+    { key: 'prenom', label: 'Prénom', syn: ['prenom'] },
+    { key: 'timestamp', label: 'Horodatage', syn: ['timestamp', 'horodatage', 'date', 'datetime'] },
+    { key: 'promotion', label: 'Promotion', syn: ['promotion', 'promo', 'codepromotion'] },
+    { key: 'cours', label: 'Cours', syn: ['cours', 'codecours'] },
+];
+const STATIC_SOURCES = {
+    parcours:   { label: 'Parcours',   fields: PARCOURS_FIELDS,   nameHints: ['parcours'] },
+    promotions: { label: 'Promotions', fields: PROMOTIONS_FIELDS, nameHints: ['promotions', 'promotion'] },
+    cours:      { label: 'Cours',      fields: COURS_FIELDS,      nameHints: ['cours'] },
+};
+
+/* ------------------------------------------------------------------ accès aux tables Grist */
+let tableList = [];
+const tableCache = new Map();
+async function fetchTableFresh(tableId) {
+    if (!tableId) return null;
+    const raw = await grist.docApi.fetchTable(tableId);
+    const cols = Object.keys(raw).filter(k => k !== 'id' && k !== 'manualSort');
+    const n = (raw.id || []).length;
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+        const row = { _gristId: raw.id[i] };
+        cols.forEach(c => { row[c] = raw[c][i]; });
+        rows.push(row);
+    }
+    return { cols, rows };
+}
+async function fetchTableCached(tableId) {
+    if (!tableId) return null;
+    if (tableCache.has(tableId)) return tableCache.get(tableId);
+    const entry = await fetchTableFresh(tableId);
+    if (entry) tableCache.set(tableId, entry);
+    return entry;
+}
+function normalizeRow(fields, cols, row) {
+    const o = { _gristId: row._gristId };
+    fields.forEach(f => { o[f.key] = gristStr(row[(cols || {})[f.key]]); });
+    return o;
+}
+
+/* ------------------------------------------------------------------ configuration persistante */
+const CFG_KEY = 'PresencesWidget_config_v1';
+let cfg = { static: {}, dynamic: {} };   // dynamic[promoCode] = { etudTable, presTable, etudCols, presCols }
+
+function saveConfig() {
+    try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {}
+    if (inGrist) { try { Promise.resolve(grist.setOption(CFG_KEY, cfg)).catch(() => {}); } catch (e) {} }
+}
+async function loadConfig() {
+    if (inGrist) {
+        try {
+            const v = await grist.getOption(CFG_KEY);
+            gristConnected = true;
+            if (v && typeof v === 'object') return { static: v.static || {}, dynamic: v.dynamic || {} };
+        } catch (e) { /* pas de vrai parent Grist : repli localStorage */ }
+    }
+    try { const v = JSON.parse(localStorage.getItem(CFG_KEY)); if (v) return { static: v.static || {}, dynamic: v.dynamic || {} }; } catch (e) {}
+    return { static: {}, dynamic: {} };
+}
+
+/* ---------------------------------------- détection automatique tables/colonnes */
+function guessStaticTable(tables, hints) {
+    return tables.find(t => hints.some(h => normColId(t) === normColId(h)))
+        || tables.find(t => hints.some(h => normColId(t).includes(normColId(h))))
+        || '';
+}
+async function autoDetectStatic() {
+    for (const key of Object.keys(STATIC_SOURCES)) {
+        const src = STATIC_SOURCES[key];
+        const existing = cfg.static[key];
+        const table = (existing && existing.table && tableList.includes(existing.table)) ? existing.table : guessStaticTable(tableList, src.nameHints);
+        let cols = existing && existing.table === table ? existing.cols : {};
+        if (table && !Object.keys(cols).length) {
+            const entry = await fetchTableCached(table).catch(() => null);
+            if (entry) cols = autoGuessCols(entry.cols, src.fields);
+        }
+        cfg.static[key] = { table, cols };
+    }
+}
+/* devine la table étudiants_<promo> / présences<promo> parmi les tables du document */
+function guessDynamicTable(tables, promoCode, kind) {
+    const p = normColId(promoCode);
+    const candidates = kind === 'etud'
+        ? ['etudiants_' + p, 'etudiants' + p]
+        : ['presences_' + p, 'presences' + p];
+    return tables.find(t => candidates.some(c => normColId(t) === normColId(c))) || '';
+}
+async function resolveDynamicSource(promoCode) {
+    const existing = cfg.dynamic[promoCode] || {};
+    const etudTable = (existing.etudTable && tableList.includes(existing.etudTable)) ? existing.etudTable : guessDynamicTable(tableList, promoCode, 'etud');
+    const presTable = (existing.presTable && tableList.includes(existing.presTable)) ? existing.presTable : guessDynamicTable(tableList, promoCode, 'pres');
+    let etudCols = existing.etudTable === etudTable ? (existing.etudCols || {}) : {};
+    let presCols = existing.presTable === presTable ? (existing.presCols || {}) : {};
+    if (etudTable && !Object.keys(etudCols).length) {
+        const entry = await fetchTableCached(etudTable).catch(() => null);
+        if (entry) etudCols = autoGuessCols(entry.cols, ETUD_FIELDS);
+    }
+    if (presTable && !Object.keys(presCols).length) {
+        const entry = await fetchTableCached(presTable).catch(() => null);
+        if (entry) presCols = autoGuessCols(entry.cols, PRES_FIELDS);
+    }
+    cfg.dynamic[promoCode] = { etudTable, presTable, etudCols, presCols };
+    return cfg.dynamic[promoCode];
+}
+
+/* ---------------------------------------- rendu des panneaux de configuration */
+function tableSelectHTML(attrs, current) {
+    const opts = ['<option value="">— aucune —</option>']
+        .concat(tableList.map(t => '<option value="' + escHtml(t) + '"' + (t === current ? ' selected' : '') + '>' + escHtml(t) + '</option>'));
+    return '<select ' + attrs + '>' + opts.join('') + '</select>';
+}
+function fieldSelectHTML(attrs, cols, current) {
+    const opts = ['<option value="">—</option>']
+        .concat(cols.map(c => '<option value="' + escHtml(c) + '"' + (c === current ? ' selected' : '') + '>' + escHtml(c) + '</option>'));
+    return '<select ' + attrs + '>' + opts.join('') + '</select>';
+}
+async function renderStaticSourceRow(key) {
+    const src = STATIC_SOURCES[key];
+    const entry = cfg.static[key] && cfg.static[key].table ? await fetchTableCached(cfg.static[key].table).catch(() => null) : null;
+    const cols = entry ? entry.cols : [];
+    const c = cfg.static[key] || { table: '', cols: {} };
+    const complete = c.table && src.fields.every(f => c.cols[f.key]);
+    const status = !c.table ? '—' : (complete ? '✅' : '⚠️');
+    const fieldsHtml = src.fields.map(f =>
+        '<label class="src-field">' + escHtml(f.label) +
+        fieldSelectHTML('data-static="' + key + '" data-field="' + f.key + '"', cols, c.cols[f.key] || '') +
+        '</label>'
+    ).join('');
+    return '<details class="src-row" open>' +
+        '<summary>' + status + ' <b>' + escHtml(src.label) + '</b> — table : ' +
+        tableSelectHTML('data-static-table="' + key + '"', c.table) + '</summary>' +
+        '<div class="src-fields">' + fieldsHtml + '</div></details>';
+}
+async function renderStaticSourcesPanel() {
+    const html = [];
+    for (const key of Object.keys(STATIC_SOURCES)) html.push(await renderStaticSourceRow(key));
+    document.getElementById('staticSourcesPanel').innerHTML = html.join('');
+    wireStaticSourcesPanel();
+}
+function wireStaticSourcesPanel() {
+    document.querySelectorAll('[data-static-table]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const key = sel.getAttribute('data-static-table');
+            cfg.static[key] = { table: sel.value, cols: {} };
+            if (sel.value) {
+                const entry = await fetchTableCached(sel.value).catch(() => null);
+                if (entry) cfg.static[key].cols = autoGuessCols(entry.cols, STATIC_SOURCES[key].fields);
+            }
+            saveConfig();
+            await renderStaticSourcesPanel();
+            await refreshSelects();
+        });
+    });
+    document.querySelectorAll('[data-static]').forEach(sel => {
+        sel.addEventListener('change', () => {
+            const key = sel.getAttribute('data-static');
+            const field = sel.getAttribute('data-field');
+            cfg.static[key].cols[field] = sel.value;
+            saveConfig();
+        });
+    });
+}
+async function renderDynamicSourcesPanel(promoCode) {
+    const dyn = cfg.dynamic[promoCode] || { etudTable: '', presTable: '', etudCols: {}, presCols: {} };
+    const etudEntry = dyn.etudTable ? await fetchTableCached(dyn.etudTable).catch(() => null) : null;
+    const presEntry = dyn.presTable ? await fetchTableCached(dyn.presTable).catch(() => null) : null;
+    const etudFieldsHtml = ETUD_FIELDS.map(f =>
+        '<label class="src-field">' + escHtml(f.label) +
+        fieldSelectHTML('data-dyn-field="etud" data-field="' + f.key + '"', etudEntry ? etudEntry.cols : [], dyn.etudCols[f.key] || '') +
+        '</label>'
+    ).join('');
+    const presFieldsHtml = PRES_FIELDS.map(f =>
+        '<label class="src-field">' + escHtml(f.label) +
+        fieldSelectHTML('data-dyn-field="pres" data-field="' + f.key + '"', presEntry ? presEntry.cols : [], dyn.presCols[f.key] || '') +
+        '</label>'
+    ).join('');
+    document.getElementById('dynSourcesPanel').innerHTML =
+        '<details class="src-row" open><summary>👨‍🎓 Étudiants — table : ' +
+        tableSelectHTML('data-dyn-table="etud"', dyn.etudTable) + '</summary>' +
+        '<div class="src-fields">' + etudFieldsHtml + '</div></details>' +
+        '<details class="src-row" open><summary>✅ Présences — table : ' +
+        tableSelectHTML('data-dyn-table="pres"', dyn.presTable) + '</summary>' +
+        '<div class="src-fields">' + presFieldsHtml + '</div></details>';
+    wireDynamicSourcesPanel(promoCode);
+}
+function wireDynamicSourcesPanel(promoCode) {
+    document.querySelectorAll('[data-dyn-table]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const kind = sel.getAttribute('data-dyn-table');
+            const dyn = cfg.dynamic[promoCode];
+            if (kind === 'etud') { dyn.etudTable = sel.value; dyn.etudCols = {}; }
+            else { dyn.presTable = sel.value; dyn.presCols = {}; }
+            const fields = kind === 'etud' ? ETUD_FIELDS : PRES_FIELDS;
+            if (sel.value) {
+                const entry = await fetchTableCached(sel.value).catch(() => null);
+                if (entry) { if (kind === 'etud') dyn.etudCols = autoGuessCols(entry.cols, fields); else dyn.presCols = autoGuessCols(entry.cols, fields); }
+            }
+            saveConfig();
+            await renderDynamicSourcesPanel(promoCode);
+        });
+    });
+    document.querySelectorAll('[data-dyn-field]').forEach(sel => {
+        sel.addEventListener('change', () => {
+            const kind = sel.getAttribute('data-dyn-field');
+            const field = sel.getAttribute('data-field');
+            const dyn = cfg.dynamic[promoCode];
+            if (kind === 'etud') dyn.etudCols[field] = sel.value; else dyn.presCols[field] = sel.value;
+            saveConfig();
+        });
+    });
+}
+
+/* ------------------------------------------------------------------ étape 1-3 : sélections en cascade */
+let parcoursRows = [], promotionsRows = [], coursRows = [];
+
+async function loadStaticRows() {
+    parcoursRows = []; promotionsRows = []; coursRows = [];
+    const pc = cfg.static.parcours;
+    if (pc && pc.table) { const e = await fetchTableCached(pc.table).catch(() => null); if (e) parcoursRows = e.rows.map(r => normalizeRow(PARCOURS_FIELDS, pc.cols, r)); }
+    const pr = cfg.static.promotions;
+    if (pr && pr.table) { const e = await fetchTableCached(pr.table).catch(() => null); if (e) promotionsRows = e.rows.map(r => normalizeRow(PROMOTIONS_FIELDS, pr.cols, r)); }
+    const co = cfg.static.cours;
+    if (co && co.table) { const e = await fetchTableCached(co.table).catch(() => null); if (e) coursRows = e.rows.map(r => normalizeRow(COURS_FIELDS, co.cols, r)); }
+}
+function fillSelect(sel, options, placeholder) {
+    sel.innerHTML = '<option value="">' + escHtml(placeholder) + '</option>' +
+        options.map(o => '<option value="' + escHtml(o.value) + '">' + escHtml(o.label) + '</option>').join('');
+}
+async function refreshSelects() {
+    await loadStaticRows();
+    const selParcours = document.getElementById('selParcours');
+    fillSelect(selParcours, parcoursRows.filter(p => p.code).map(p => ({ value: p.code, label: p.code + (p.label ? ' — ' + p.label : '') })), '— choisir —');
+    onParcoursChange();
+}
+function onParcoursChange() {
+    const parcours = document.getElementById('selParcours').value;
+    const selPromotion = document.getElementById('selPromotion');
+    const selCours = document.getElementById('selCours');
+    if (!parcours) {
+        selPromotion.disabled = true; fillSelect(selPromotion, [], '— choisir un parcours —');
+        selCours.disabled = true; fillSelect(selCours, [], '— choisir une promotion —');
+        document.getElementById('loadStudentsBtn').disabled = true;
+        return;
+    }
+    const promos = promotionsRows.filter(p => p.parcours === parcours && p.code);
+    fillSelect(selPromotion, promos.map(p => ({ value: p.code, label: p.code + (p.annee ? ' (' + p.annee + ')' : '') })), '— choisir —');
+    selPromotion.disabled = false;
+    const cours = coursRows.filter(c => c.parcours === parcours && c.code);
+    fillSelect(selCours, cours.map(c => ({ value: c.code, label: c.code + (c.label ? ' — ' + c.label : '') })), '— choisir —');
+    selCours.disabled = false;
+    checkReady();
+}
+function checkReady() {
+    const ok = document.getElementById('selPromotion').value && document.getElementById('selCours').value;
+    document.getElementById('loadStudentsBtn').disabled = !ok;
+}
+
+/* ------------------------------------------------------------------ étape 4-5 : liste des étudiants + présence */
+let currentDyn = null, currentPromo = '', currentCours = '';
+let presentRowByEtu = new Map();   // numEtudiant -> _gristId de la ligne de présence du jour pour ce cours
+
+async function loadStudentsAndPresences() {
+    currentPromo = document.getElementById('selPromotion').value;
+    currentCours = document.getElementById('selCours').value;
+    const errBox = document.getElementById('loadError');
+    errBox.innerHTML = '';
+    if (!currentPromo || !currentCours) return;
+
+    document.getElementById('dynMappingDetails').style.display = '';
+    try {
+        currentDyn = await resolveDynamicSource(currentPromo);
+        saveConfig();
+        await renderDynamicSourcesPanel(currentPromo);
+
+        if (!currentDyn.etudTable || !ETUD_FIELDS.filter(f => f.key !== 'photo' && f.key !== 'github').every(f => currentDyn.etudCols[f.key])) {
+            throw new Error('Impossible de déterminer la table/colonnes des étudiants pour la promotion "' + currentPromo + '". ' +
+                'Choisissez la table et les colonnes ci-dessus (« Tables et colonnes utilisées pour cette promotion »).');
+        }
+        if (!currentDyn.presTable || !PRES_FIELDS.filter(f => f.key !== 'nom' && f.key !== 'prenom').every(f => currentDyn.presCols[f.key])) {
+            throw new Error('Impossible de déterminer la table/colonnes des présences pour la promotion "' + currentPromo + '". ' +
+                'Choisissez la table et les colonnes ci-dessus (« Tables et colonnes utilisées pour cette promotion »).');
+        }
+
+        tableCache.delete(currentDyn.etudTable);
+        tableCache.delete(currentDyn.presTable);
+        const etudEntry = await fetchTableFresh(currentDyn.etudTable);
+        const presEntry = await fetchTableFresh(currentDyn.presTable);
+
+        const students = etudEntry.rows.map(r => normalizeRow(ETUD_FIELDS, currentDyn.etudCols, r))
+            .filter(s => s.numEtudiant)
+            .sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
+
+        const now = new Date();
+        presentRowByEtu = new Map();
+        presEntry.rows.forEach(row => {
+            const p = normalizeRow(PRES_FIELDS, currentDyn.presCols, row);
+            if (p.cours !== currentCours) return;
+            const d = parseTimestamp(row[currentDyn.presCols.timestamp]);
+            if (d && !isSameLocalDay(d, now)) return;
+            presentRowByEtu.set(p.numEtudiant, p._gristId);
+        });
+
+        renderStudents(students);
+    } catch (e) {
+        errBox.innerHTML = '<div class="error">' + escHtml(e && e.message || String(e)) + '</div>';
+        document.getElementById('studentsGrid').innerHTML = '';
+        document.getElementById('summaryLine').textContent = '';
+    }
+}
+
+function initials(nom, prenom) {
+    return ((prenom || '').charAt(0) + (nom || '').charAt(0)).toUpperCase() || '?';
+}
+let accessTokenPromise = null;
+async function attachmentUrl(attachmentId) {
+    if (!attachmentId || !inGrist) return '';
+    try {
+        if (!accessTokenPromise) accessTokenPromise = grist.docApi.getAccessToken({ readOnly: true });
+        const access = await accessTokenPromise;
+        return access.baseUrl + '/attachments/' + attachmentId + '/download?auth=' + access.token;
+    } catch (e) { return ''; }
+}
+
+let studentsCurrentlyShown = [];
+function renderStudents(students) {
+    studentsCurrentlyShown = students;
+    const grid = document.getElementById('studentsGrid');
+    grid.innerHTML = students.map(s => {
+        const present = presentRowByEtu.has(s.numEtudiant);
+        const githubHtml = s.github ? '<div class="student-meta"><a href="https://github.com/' + escHtml(s.github.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/^@/, '')) + '" target="_blank" rel="noopener">@' + escHtml(s.github.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/^@/, '')) + '</a></div>' : '';
+        return '<div class="student-card' + (present ? ' is-present' : '') + '" data-etu="' + escHtml(s.numEtudiant) + '">' +
+            '<div class="avatar" id="avatar-' + escHtml(s.numEtudiant) + '">' + escHtml(initials(s.nom, s.prenom)) + '</div>' +
+            '<div class="student-name">' + escHtml(s.prenom) + ' ' + escHtml(s.nom) + '</div>' +
+            '<div class="student-meta">' + escHtml(s.mail) + '</div>' +
+            '<div class="student-meta">N° ' + escHtml(s.numEtudiant) + '</div>' +
+            githubHtml +
+            '<button class="presence-btn ' + (present ? 'present' : '') + '" data-etu="' + escHtml(s.numEtudiant) + '">' +
+            (present ? '✅ Présent (cliquer pour annuler)' : 'Marquer présent') + '</button>' +
+            '</div>';
+    }).join('');
+    grid.querySelectorAll('.presence-btn').forEach(btn => btn.addEventListener('click', () => togglePresence(btn.getAttribute('data-etu'))));
+    updateSummary();
+
+    // photos chargées de façon asynchrone (nécessitent un token d'accès Grist) ; normalizeRow ne
+    // conserve que des chaînes, donc on relit la colonne "photo" (valeur brute) directement
+    fetchTableCached(currentDyn.etudTable).then(entry => {
+        if (!entry) return;
+        entry.rows.forEach(async row => {
+            const numEtudiant = gristStr(row[currentDyn.etudCols.numEtudiant]);
+            const attId = firstAttachmentId(row[currentDyn.etudCols.photo]);
+            if (!attId) return;
+            const url = await attachmentUrl(attId);
+            if (!url) return;
+            const el = document.getElementById('avatar-' + numEtudiant);
+            if (!el) return;
+            const img = document.createElement('img');
+            img.className = 'avatar';
+            img.src = url;
+            img.onerror = () => { img.remove(); };
+            el.replaceWith(img);
+        });
+    });
+}
+function updateSummary() {
+    const total = studentsCurrentlyShown.length;
+    const present = studentsCurrentlyShown.filter(s => presentRowByEtu.has(s.numEtudiant)).length;
+    document.getElementById('summaryLine').innerHTML = '<b>' + present + '</b> / ' + total + ' présent(s) — ' + escHtml(currentCours) + ' · ' + escHtml(currentPromo);
+}
+
+async function togglePresence(numEtudiant) {
+    const student = studentsCurrentlyShown.find(s => s.numEtudiant === numEtudiant);
+    if (!student || !currentDyn) return;
+    const card = document.querySelector('.student-card[data-etu="' + numEtudiant.replace(/"/g, '') + '"]');
+    const btn = card ? card.querySelector('.presence-btn') : null;
+    if (btn) btn.disabled = true;
+    try {
+        const existingRowId = presentRowByEtu.get(numEtudiant);
+        if (existingRowId) {
+            await grist.docApi.applyUserActions([['RemoveRecord', currentDyn.presTable, existingRowId]]);
+            presentRowByEtu.delete(numEtudiant);
+        } else {
+            const cols = currentDyn.presCols;
+            const fields = {};
+            fields[cols.numEtudiant] = numEtudiant;
+            if (cols.nom) fields[cols.nom] = student.nom;
+            if (cols.prenom) fields[cols.prenom] = student.prenom;
+            fields[cols.promotion] = currentPromo;
+            fields[cols.cours] = currentCours;
+            fields[cols.timestamp] = Math.floor(Date.now() / 1000);
+            const res = await grist.docApi.applyUserActions([['AddRecord', currentDyn.presTable, null, fields]]);
+            const newRowId = res && res.retValues && res.retValues[0];
+            presentRowByEtu.set(numEtudiant, newRowId);
+        }
+        if (card) card.classList.toggle('is-present', presentRowByEtu.has(numEtudiant));
+        if (btn) {
+            const present = presentRowByEtu.has(numEtudiant);
+            btn.classList.toggle('present', present);
+            btn.textContent = present ? '✅ Présent (cliquer pour annuler)' : 'Marquer présent';
+        }
+        updateSummary();
+    } catch (e) {
+        document.getElementById('loadError').innerHTML = '<div class="error">Erreur d\'enregistrement : ' + escHtml(e && e.message || String(e)) + '</div>';
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+/* ------------------------------------------------------------------ initialisation */
+async function refreshTableList() {
+    tableList = inGrist ? await grist.docApi.listTables() : [];
+    const el = document.getElementById('gristStatus');
+    if (el) el.textContent = inGrist ? ('· Widget Grist connecté — ' + tableList.length + ' table(s) trouvée(s)') : '';
+}
+function wire() {
+    document.getElementById('refreshTables').addEventListener('click', async () => {
+        tableCache.clear();
+        await refreshTableList();
+        await autoDetectStatic();
+        saveConfig();
+        await renderStaticSourcesPanel();
+        await refreshSelects();
+    });
+    document.getElementById('selParcours').addEventListener('change', onParcoursChange);
+    document.getElementById('selPromotion').addEventListener('change', checkReady);
+    document.getElementById('selCours').addEventListener('change', checkReady);
+    document.getElementById('loadStudentsBtn').addEventListener('click', loadStudentsAndPresences);
+}
+async function init() {
+    if (!inGrist) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">Cette page doit être ouverte comme <b>widget personnalisé</b> dans Grist ' +
+            '(dans un document Grist : Ajouter un widget → Personnalisé → coller l\'URL de cette page). ' +
+            'Ouverte seule, hors Grist, elle n\'a aucune table à lire.</div>';
+        return;
+    }
+    try {
+        cfg = await loadConfig();
+        await refreshTableList();
+        await autoDetectStatic();
+        saveConfig();
+        await renderStaticSourcesPanel();
+        await refreshSelects();
+        wire();
+    } catch (e) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">Impossible de communiquer avec Grist : ' + escHtml(e && e.message || String(e)) + '</div>';
+    }
+}
+init();
+</script>
+</body>
+</html>

@@ -5,11 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cohérence des maquettes entre Service Formation & Pégase</title>
 
-    <link href="assets/css/handsontable.full.min.css" rel="stylesheet">
-    <script src="assets/js/handsontable.full.min.js"></script>
-    <script src="assets/js/d3.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+    <!-- API du custom widget Grist : cette page N'A DE SENS QUE dans l'iframe d'un widget Grist —
+         elle ne lit aucun CSV, toutes les données proviennent de tables du document via grist.docApi. -->
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 
     <style>
+        .src-row { margin-bottom: 8px; border: 1px solid #e2e2e2; border-radius: 6px; padding: 8px 12px; }
+        .src-row summary { font-weight: normal; font-size: 13px; cursor: pointer; }
+        .src-row summary code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; }
+        .src-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+        .src-field { display: flex; flex-direction: column; font-size: 12px; color: #555; gap: 4px; min-width: 160px; }
+        .src-field select { padding: 4px; }
         body {
             font-family: Arial, Helvetica, sans-serif;
             margin: 0;
@@ -52,25 +60,50 @@
         .hot-container { width: 100%; }
         .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 4px; }
         .muted { color: #888; font-size: 12px; }
-        .rel-conflit { background: #f8d7da !important; }
-        .rel-mut { background: #d4edda !important; }
-        .rel-int { background: #dbeafe !important; }
-        .rel-salle { background: #ffe8d6 !important; }
-        .rel-ec { background: #ece2f8 !important; }
-        .rel-manuelle { background: #d1f5ec !important; }
-        .rel-horsref { background: #fff3cd !important; }
+        /* ".handsontable td.rel-xxx" (spécificité 0,2,1) plutôt que ".rel-xxx" (0,1,0) : le thème par
+           défaut de Handsontable ≥13 (chargé depuis le CDN, non figé sur une version) applique
+           ".handsontable .htDimmed { background-color: ... !important }" sur les cellules en lecture
+           seule (classe "htDimmed" ajoutée automatiquement) — même spécificité de base que nos classes,
+           donc à égalité de !important c'est cette règle du thème qui l'emportait (injectée après la
+           nôtre). On dépasse volontairement sa spécificité pour rester correct quelle que soit la
+           version résolue par le CDN. */
+        .handsontable td.rel-conflit { background: #f8d7da !important; }
+        .handsontable td.rel-mut { background: #d4edda !important; }
+        .handsontable td.rel-int { background: #dbeafe !important; }
+        .handsontable td.rel-salle { background: #ffe8d6 !important; }
+        .handsontable td.rel-ec { background: #ece2f8 !important; }
+        .handsontable td.rel-manuelle { background: #d1f5ec !important; }
+        .handsontable td.rel-horsref { background: #fff3cd !important; }
     </style>
 </head>
 <body>
-    <h1>Cohérence des maquettes</h1>
+    <h1>Cohérence des maquettes entre Service Formation & Pégase</h1>
     <p class="subtitle">
-        Rapproche <code>assets/data/EDT_26-27/HNmaquetteLMD5ListeEC.csv</code> (export LMD5 utilisé pour les
-        emplois du temps) et les maquettes détaillées <code>assets/data/Maquettes/*.csv</code> (export de
-        l'arborescence Formation → Année → Semestre → UE → EC), pour repérer les écarts d'ECTS, de statut
-        (obligatoire/facultatif) et les EC présents d'un seul côté.
+        Rapproche la maquette LMD5 (export utilisé pour les emplois du temps : Parcours, Semestre, UE, EC,
+        ECTS, statut) et les maquettes détaillées (arborescence Formation → Année → Semestre → UE → EC),
+        pour repérer les écarts d'ECTS, de statut (obligatoire/facultatif) et les EC présents d'un seul côté.
+        Les deux sources sont lues dans des <b>tables du document Grist</b> configurées ci-dessous.
+        <span id="gristStatus" class="muted" style="margin-left:8px;"></span>
     </p>
 
     <div id="loadError"></div>
+
+    <div class="card">
+        <h2>0. Sources Grist</h2>
+        <p class="muted">
+            Associez la maquette LMD5 et chacune des 10 maquettes détaillées à une table du document, puis
+            vérifiez la correspondance des colonnes (détectée automatiquement par ressemblance de nom, à
+            corriger si besoin). Nécessite l'accès complet (<code>requiredAccess: 'full'</code>) pour lire les
+            tables par nom. La configuration est enregistrée comme option du widget (partagée entre les
+            utilisateurs du document).
+        </p>
+        <div class="toolbar" style="display:flex;gap:16px;margin-bottom:10px;">
+            <button class="secondary" id="refreshTables">Actualiser la liste des tables</button>
+            <button id="loadBtn">Charger les données</button>
+        </div>
+        <div id="sourcesPanel"></div>
+    </div>
+
     <div class="card" id="sourcesCard">
         <h2>Sources chargées</h2>
         <div class="badges" id="sourcesBadges"></div>
@@ -112,37 +145,77 @@
     </div>
 
 <script>
-/* ------------------------------------------------------------------ config */
-const HN_PATH = 'assets/data/EDT_26-27/HNmaquetteLMD5ListeEC.csv';
-const MAQ_FILES = [
-    { file: 'ACEHN2', label: 'ACEHN (M2)' },
-    { file: 'CEN1',   label: 'CEN (M1)' },
-    { file: 'CEN2',   label: 'CEN (M2)' },
-    { file: 'MCPN1',  label: 'MCPN (M1)' },
-    { file: 'MCPN2',  label: 'MCPN (M2)' },
-    { file: 'MSI1',   label: 'MSI (M1)' },
-    { file: 'MSI2',   label: 'MSI (M2)' },
-    { file: 'NET1',   label: 'NET (M1)' },
-    { file: 'NET2',   label: 'NET (M2)' },
-    { file: 'THYP2',  label: 'THYP (M2)' }
-].map(f => ({ ...f, code: f.file.replace(/\d+$/, ''), path: 'assets/data/Maquettes/' + f.file + '.csv' }));
+/* ==================================================================== intégration Grist (custom widget) */
+// Cette page n'a de sens QUE dans l'iframe d'un widget Grist : elle ne lit aucun CSV, toutes les
+// données proviennent de tables du document via grist.docApi. Pour la déployer :
+//  - servir ce dossier (coherenceMaquettesGrist.html + assets/) en HTTPS (http://localhost en dev) ;
+//  - le serveur ne doit pas envoyer de X-Frame-Options / CSP frame-ancestors bloquant l'iframe ;
+//  - dans Grist : Ajouter un widget → Personnalisé → coller l'URL de cette page ;
+//  - accepter l'accès complet (« full ») demandé : nécessaire pour lire les tables par nom
+//    (grist.docApi.listTables / fetchTable) — le widget ne lit que les tables associées en section 0.
+const inGrist = typeof grist !== 'undefined' && window.self !== window.top;
+let gristConnected = false;   // confirmé seulement après un appel RPC réussi (listTables/getOption)
+if (inGrist) {
+    try { 
+        grist.ready({ requiredAccess: 'full' }); 
+        console.log("GRIST : OK");
+    } catch (e) { 
+        /* API indisponible (parent hors Grist) : mode autonome */ 
+        console.log(e);
+    }
+}
 
+/* ------------------------------------------------------------------ config */
 const SEUIL_EC = 0.34;       // similarité minimale pour apparier un EC par intitulé
 const SEUIL_EC_MUT = 0.55;   // seuil (plus strict) pour un rapprochement inter-parcours (mutualisation)
 
+/* sources logiques attendues, associées à des tables Grist en section 0 */
+const HN_FIELDS = [
+    { key: 'Parcours', label: 'Parcours', syn: ['parcours'] },
+    { key: 'Semestre', label: 'Semestre', syn: ['semestre', 'sem'] },
+    { key: 'Intitulés des UE', label: 'Intitulé UE', syn: ['intitulesdesue', 'intituleue', 'ue'] },
+    { key: 'Code Pégase', label: 'Code Pégase', syn: ['codepegase', 'pegase'] },
+    { key: 'Intitulés des EC', label: 'Intitulé EC', syn: ['intitulesdesec', 'intituleec'] },
+    { key: "Type d'enseignement-Statut", label: 'Statut', syn: ['typedenseignementstatut', 'statut', 'type'] },
+    { key: 'ECTS', label: 'ECTS', syn: ['ects'] },
+    { key: 'Volume horaire Etudiant (VHE)', label: 'VHE', syn: ['volumehoraireetudiantvhe', 'vhe', 'volumehoraireetudiant'] },
+    { key: 'Volume horaire Maquette (VHM)', label: 'VHM', syn: ['volumehorairemaquettevhm', 'vhm', 'volumehorairemaquette'] }
+];
+const HN_CANON = HN_FIELDS.map(f => f.key);
+
+const MAQ_FIELDS = [
+    { key: 'Semestre', label: 'Semestre', syn: ['semestre', 'sem'] },
+    { key: 'Type', label: 'Type', syn: ['type'] },
+    { key: 'Formation', label: 'Formation', syn: ['formation'] },
+    { key: 'Année', label: 'Année', syn: ['annee'] },
+    { key: 'UE', label: 'UE', syn: ['ue'] },
+    { key: 'EC à choix', label: 'EC à choix', syn: ['ecachoix', 'choix'] },
+    { key: 'Groupe', label: 'Groupe', syn: ['groupe'] },
+    { key: 'Code', label: 'Code', syn: ['code'] },
+    { key: 'Libellé', label: 'Libellé', syn: ['libelle'] },
+    { key: 'ECTS', label: 'ECTS', syn: ['ects'] },
+    { key: 'Statut', label: 'Statut', syn: ['statut'] },
+    { key: 'Mutualisé', label: 'Mutualisé', syn: ['mutualise'] }
+];
+const MAQ_CANON = MAQ_FIELDS.map(f => f.key);
+
+const MAQ_SOURCES = [
+    { id: 'ACEHN2', label: 'ACEHN (M2)', aliases: ['acehn'] },
+    { id: 'CEN1',   label: 'CEN (M1)',   aliases: ['cen'] },
+    { id: 'CEN2',   label: 'CEN (M2)',   aliases: ['cen'] },
+    { id: 'MCPN1',  label: 'MCPN (M1)',  aliases: ['mcpn'] },
+    { id: 'MCPN2',  label: 'MCPN (M2)',  aliases: ['mcpn'] },
+    { id: 'MSI1',   label: 'MSI (M1)',   aliases: ['msi', 'gsi'] },
+    { id: 'MSI2',   label: 'MSI (M2)',   aliases: ['msi', 'gsi'] },
+    { id: 'NET1',   label: 'NET (M1)',   aliases: ['net'] },
+    { id: 'NET2',   label: 'NET (M2)',   aliases: ['net'] },
+    { id: 'THYP2',  label: 'THYP (M2)',  aliases: ['thyp'] }
+].map(s => ({ ...s, code: s.id.replace(/\d+$/, '') }));
+
+const REQUIRED = { HN: ['Parcours', 'Semestre', 'Intitulés des EC'], MAQ: ['Type', 'Semestre', 'Libellé'] };
+
 /* ------------------------------------------------------------------ helpers */
 const stripAccents = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
-
-function parseCSV(text) {
-    const rows = d3.csvParseRows(text);
-    let headers = rows[0].map((h, i) => (h || '').trim() || ('col' + i));
-    const seen = {};
-    headers = headers.map(h => { if (seen[h] != null) { seen[h]++; return h + '_' + seen[h]; } seen[h] = 0; return h; });
-    const data = rows.slice(1)
-        .filter(r => r.some(c => (c || '').trim() !== ''))
-        .map(r => { const o = {}; headers.forEach((h, i) => o[h] = r[i] != null ? r[i].trim() : ''); return o; });
-    return { headers, data };
-}
 
 /* nombre "à la française" ("30,0" -> 30) */
 function numFR(v) {
@@ -200,6 +273,179 @@ let hnEc = [];       // EC de la maquette LMD5
 let maqEc = [];      // EC des maquettes détaillées
 let maqUe = [];      // UE des maquettes détaillées
 let couverture = new Set();   // "CODE¦semestre" réellement chargés côté maquettes détaillées
+
+/* ------------------------------------------------------------------ accès aux tables Grist */
+let tableList = [];                 // noms des tables du document
+const tableCache = new Map();       // tableId -> {cols:[...], rows:[{...,_gristId}]}
+let sourceConfig = {};              // { HN:{table,cols}, ACEHN2:{table,cols}, CEN1:{...}, ... }
+const CFG_KEY = 'LMD5ListeEC_HN-MCPN';
+
+/* normalise une valeur Grist (texte, nombre, booléen, liste encodée) en chaîne */
+function gristStr(v) {
+    if (v == null) return '';
+    if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+    if (Array.isArray(v)) return v.slice(1).filter(x => x != null).join(', ');   // ex. Choice List : ['L','a','b']
+    return String(v).trim();
+}
+async function fetchTableCached(tableId) {
+    if (!tableId) return null;
+    if (tableCache.has(tableId)) return tableCache.get(tableId);
+    const raw = await grist.docApi.fetchTable(tableId);
+    const cols = Object.keys(raw).filter(k => k !== 'id' && k !== 'manualSort');
+    const n = (raw.id || []).length;
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+        const row = { _gristId: raw.id[i] };
+        cols.forEach(c => { row[c] = raw[c][i]; });
+        rows.push(row);
+    }
+    const entry = { cols, rows };
+    tableCache.set(tableId, entry);
+    return entry;
+}
+/* projette une ligne Grist sur les noms de colonnes canoniques attendus par le reste du script,
+   via la correspondance colonne choisie en section 0 (cfg.cols[field.key] = colId Grist) */
+function normalizeRow(fields, cols, row) {
+    const o = {};
+    fields.forEach(f => { o[f.key] = gristStr(row[(cols || {})[f.key]]); });
+    return o;
+}
+
+/* ---------------------------------------- correspondance automatique tables/colonnes */
+function normColId(s) { return stripAccents(String(s || '')).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function bestColMatch(cols, synonyms) {
+    let best = '', bestScore = 0;
+    cols.forEach(c => {
+        const nc = normColId(c);
+        synonyms.forEach(syn => {
+            const ns = normColId(syn);
+            if (!ns) return;
+            let score = 0;
+            if (nc === ns) score = 100;
+            else if (nc.includes(ns)) score = 80 - Math.abs(nc.length - ns.length);
+            else if (ns.includes(nc)) score = 60 - Math.abs(nc.length - ns.length);
+            if (score > bestScore) { bestScore = score; best = c; }
+        });
+    });
+    return bestScore >= 40 ? best : '';
+}
+function autoGuessCols(cols, fields) {
+    const out = {};
+    fields.forEach(f => { out[f.key] = bestColMatch(cols, f.syn); });
+    return out;
+}
+function levelHint(id) { return id.endsWith('1') ? '1' : id.endsWith('2') ? '2' : ''; }
+function matchesAlias(t, source) {
+    const n = normColId(t);
+    return source.aliases.some(a => n.includes(normColId(a)));
+}
+/* ne garde que les tables dont le nom contient le chiffre de niveau (1 ou 2) isolé (pas partie
+   d'un autre nombre, ex. une année) ; sans indice de niveau, ne filtre rien */
+function filterByLevel(tables, lvl) {
+    if (!lvl) return tables;
+    return tables.filter(t => new RegExp('(^|[^0-9])' + lvl + '([^0-9]|$)').test(normColId(t)));
+}
+function guessMaqTable(tables, source) {
+    // filtrage strict par niveau : mieux vaut laisser la source non configurée que de deviner
+    // une table du mauvais niveau (M1 vs M2) qui partage le même alias (ex. « cen »)
+    const cands = filterByLevel(tables.filter(t => matchesAlias(t, source)), levelHint(source.id));
+    return cands[0] || '';
+}
+function guessHnTable(tables) {
+    return tables.find(t => /hnmaquette|lmd\d|listeec/.test(normColId(t))) || '';
+}
+
+async function autoDetectAll() {
+    const hnTable = guessHnTable(tableList);
+    let hnCols = {};
+    if (hnTable) { const entry = await fetchTableCached(hnTable); hnCols = autoGuessCols(entry.cols, HN_FIELDS); }
+    sourceConfig.HN = { table: hnTable, cols: hnCols };
+
+    for (const src of MAQ_SOURCES) {
+        const table = guessMaqTable(tableList, src);
+        let cols = {};
+        if (table) { const entry = await fetchTableCached(table); cols = autoGuessCols(entry.cols, MAQ_FIELDS); }
+        sourceConfig[src.id] = { table, cols };
+    }
+}
+
+function saveSourceConfig() {
+    try { localStorage.setItem(CFG_KEY, JSON.stringify(sourceConfig)); } catch (e) {}
+    if (inGrist) { try { Promise.resolve(grist.setOption(CFG_KEY, sourceConfig)).catch(() => {}); } catch (e) {} }
+}
+async function loadSourceConfig() {
+    console.log("GRIST : loadSourceConfig");
+    if (inGrist) {
+        try {
+            console.log("GRIST loadSourceConfig : "+CFG_KEY);
+            const v = await grist.getOption(CFG_KEY);
+            gristConnected = true;
+            console.log("GRIST loadSourceConfig : "+v);
+            if (v && typeof v === 'object' && Object.keys(v).length) return v;
+        } catch (e) {
+            console.log("GRIST ERREUR : loadSourceConfig");
+
+             /* pas de vrai parent Grist : repli localStorage */ 
+        }
+    }
+    try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch (e) { return {}; }
+}
+
+/* ---------------------------------------- panneau de configuration (section 0) */
+function tableSelectHTML(attrs, current) {
+    const opts = ['<option value="">— aucune —</option>']
+        .concat(tableList.map(t => '<option value="' + escHtml(t) + '"' + (t === current ? ' selected' : '') + '>' + escHtml(t) + '</option>'));
+    return '<select ' + attrs + '>' + opts.join('') + '</select>';
+}
+function fieldSelectHTML(sourceKey, field, cols, current) {
+    const opts = ['<option value="">—</option>']
+        .concat(cols.map(c => '<option value="' + escHtml(c) + '"' + (c === current ? ' selected' : '') + '>' + escHtml(c) + '</option>'));
+    return '<label class="src-field">' + escHtml(field.label) +
+        '<select data-src="' + escHtml(sourceKey) + '" data-field="' + escHtml(field.key) + '">' + opts.join('') + '</select></label>';
+}
+function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+async function renderSourceRow(key, label, fields, kind) {
+    const cfg = sourceConfig[key] || (sourceConfig[key] = { table: '', cols: {} });
+    const entry = cfg.table ? await fetchTableCached(cfg.table).catch(() => null) : null;
+    const cols = entry ? entry.cols : [];
+    const req = REQUIRED[kind];
+    const complete = cfg.table && req.every(k => cfg.cols[k]);
+    const status = !cfg.table ? '—' : (complete ? '✅' : '⚠️');
+    const fieldsHtml = fields.map(f => fieldSelectHTML(key, f, cols, cfg.cols[f.key] || '')).join('');
+    return '<details class="src-row">' +
+        '<summary>' + status + ' ' + escHtml(label) + (cfg.table ? ' — <code>' + escHtml(cfg.table) + '</code>' : ' (non configuré)') + '</summary>' +
+        '<div class="src-fields">' +
+        '<label class="src-field">Table' + tableSelectHTML('data-src="' + escHtml(key) + '"', cfg.table) + '</label>' +
+        fieldsHtml + '</div></details>';
+}
+async function renderSourcesPanel() {
+    const box = document.getElementById('sourcesPanel');
+    const parts = [await renderSourceRow('HN', 'Maquette LMD5 (Service Formation)', HN_FIELDS, 'HN')];
+    for (const src of MAQ_SOURCES) parts.push(await renderSourceRow(src.id, 'Maquette détaillée — ' + src.label, MAQ_FIELDS, 'MAQ'));
+    box.innerHTML = parts.join('');
+    wireSourcesPanel();
+}
+function wireSourcesPanel() {
+    document.getElementById('sourcesPanel').querySelectorAll('select[data-src]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const key = sel.dataset.src;
+            const cfg = sourceConfig[key] || (sourceConfig[key] = { table: '', cols: {} });
+            if (sel.dataset.field) {
+                cfg.cols[sel.dataset.field] = sel.value;
+            } else {
+                cfg.table = sel.value;
+                cfg.cols = {};
+                if (sel.value) {
+                    const entry = await fetchTableCached(sel.value);
+                    cfg.cols = autoGuessCols(entry.cols, key === 'HN' ? HN_FIELDS : MAQ_FIELDS);
+                }
+            }
+            saveSourceConfig();
+            renderSourcesPanel();
+        });
+    });
+}
 
 /* Certaines sections de HNmaquetteLMD5ListeEC.csv (ex. parcours MCPN) présentent un décalage
    d'une colonne à partir de "Intitulés des EC" (une cellule manquante en amont a poussé tout le
@@ -465,8 +711,78 @@ function renderUe() {
     });
 }
 
+/* ------------------------------------------------------------------ chargement effectif depuis Grist */
+async function chargerDonnees() {
+    const errBox = document.getElementById('loadError');
+    const btn = document.getElementById('loadBtn');
+    errBox.innerHTML = '';
+    btn.disabled = true;
+    try {
+        hnEc = []; maqEc = []; maqUe = []; couverture = new Set();
+
+        const hnCfg = sourceConfig.HN;
+        if (hnCfg && hnCfg.table) {
+            const entry = await fetchTableCached(hnCfg.table);
+            const rows = entry.rows.map(r => normalizeRow(HN_FIELDS, hnCfg.cols, r));
+            hnEc = buildHnEc(HN_CANON, rows);
+        }
+
+        let nChargees = 0;
+        for (const src of MAQ_SOURCES) {
+            const cfg = sourceConfig[src.id];
+            if (!cfg || !cfg.table) continue;
+            const entry = await fetchTableCached(cfg.table);
+            const rows = entry.rows.map(r => normalizeRow(MAQ_FIELDS, cfg.cols, r));
+            const built = buildMaqRows(src.code, rows);
+            built.forEach(r => { if (r.semestre) couverture.add(r.code + '¦' + r.semestre); });
+            built.filter(r => r.type === 'EC' && r.libelle).forEach(r => maqEc.push(r));
+            built.filter(r => r.type === 'UE' && r.libelle).forEach(r => maqUe.push(r));
+            nChargees++;
+        }
+
+        if (!hnCfg || !hnCfg.table) {
+            errBox.innerHTML = '<div class="error">Aucune table configurée pour la maquette LMD5 : ' +
+                'associez-la en section 0 puis cliquez sur « Charger les données ».</div>';
+            return;
+        }
+        if (!nChargees) {
+            errBox.innerHTML = '<div class="error">Aucune maquette détaillée configurée : associez au moins ' +
+                'une table en section 0 puis cliquez sur « Charger les données ».</div>';
+            return;
+        }
+
+        const badgeList = [
+            ['b-total', 'HNmaquette LMD5 : ' + hnEc.length + ' EC'],
+            ['b-int', 'Maquettes détaillées : ' + nChargees + '/' + MAQ_SOURCES.length + ' sources, ' + maqEc.length + ' EC, ' + maqUe.length + ' UE']
+        ];
+        if (hnEc.nDecale) badgeList.push(['b-ec', hnEc.nDecale + ' lignes HNmaquette avec décalage de colonnes corrigé']);
+        document.getElementById('sourcesBadges').innerHTML =
+            badgeList.map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
+
+        renderEc();
+        renderUe();
+    } catch (e) {
+        errBox.innerHTML = '<div class="error">Erreur de chargement depuis Grist : ' + escHtml(e && e.message || String(e)) + '</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function refreshTableList() {
+    try {
+        tableList = await grist.docApi.listTables();
+        const el = document.getElementById('gristStatus');
+        if (el) el.textContent = '· Widget Grist connecté — ' + tableList.length + ' table(s) trouvée(s)';
+        await renderSourcesPanel();
+    } catch (e) {
+        document.getElementById('loadError').innerHTML = '<div class="error">Erreur : ' + escHtml(e && e.message || String(e)) + '</div>';
+    }
+}
+
 /* ------------------------------------------------------------------ init */
 function wire() {
+    document.getElementById('refreshTables').addEventListener('click', refreshTableList);
+    document.getElementById('loadBtn').addEventListener('click', chargerDonnees);
     document.getElementById('ecHideOk').addEventListener('change', renderEc);
     document.getElementById('ueHideOk').addEventListener('change', renderUe);
     document.getElementById('exportEc').addEventListener('click', () => {
@@ -485,47 +801,51 @@ function wire() {
     });
 }
 
-Promise.all([
-    d3.text(HN_PATH).then(t => parseCSV(t)).catch(() => null),
-    ...MAQ_FILES.map(f => d3.text(f.path).then(t => ({ f, ...parseCSV(t) })).catch(() => null))
-]).then(all => {
-    const hnRes = all[0];
-    const maqRes = all.slice(1);
-    const errors = [];
-    if (!hnRes) errors.push('Impossible de charger ' + HN_PATH + '.');
-    const okMaq = maqRes.filter(Boolean);
-    const missing = MAQ_FILES.filter((f, i) => !maqRes[i]);
-    if (missing.length) errors.push('Fichiers introuvables : ' + missing.map(f => f.path).join(', ') + '.');
-    if (errors.length) {
-        document.getElementById('loadError').innerHTML =
-            '<div class="error">' + errors.join('<br>') +
-            (hnRes ? '' : ' Ouvrez cette page via un serveur web (les requêtes <code>file://</code> sont bloquées par le navigateur).') +
-            '</div>';
-    }
-    if (!hnRes || !okMaq.length) return;
-
-    hnEc = buildHnEc(hnRes.headers, hnRes.data);
-
-    maqEc = []; maqUe = [];
-    okMaq.forEach(({ f, data }) => {
-        const rows = buildMaqRows(f.code, data);
-        rows.forEach(r => { if (r.semestre) couverture.add(r.code + '¦' + r.semestre); });
-        rows.filter(r => r.type === 'EC' && r.libelle).forEach(r => maqEc.push(r));
-        rows.filter(r => r.type === 'UE' && r.libelle).forEach(r => maqUe.push(r));
-    });
-
-    const badgeList = [
-        ['b-total', 'HNmaquette LMD5 : ' + hnEc.length + ' EC'],
-        ['b-int', 'Maquettes détaillées : ' + okMaq.length + '/' + MAQ_FILES.length + ' fichiers, ' + maqEc.length + ' EC, ' + maqUe.length + ' UE']
-    ];
-    if (hnEc.nDecale) badgeList.push(['b-ec', hnEc.nDecale + ' lignes HNmaquette avec décalage de colonnes corrigé']);
-    document.getElementById('sourcesBadges').innerHTML =
-        badgeList.map(([cl, t]) => '<span class="badge ' + cl + '">' + t + '</span>').join('');
-
+async function init() {
     wire();
-    renderEc();
-    renderUe();
-});
+    if (!inGrist) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">Cette page doit être ouverte comme <b>widget personnalisé</b> dans Grist ' +
+            '(dans un document Grist : Ajouter un widget → Personnalisé → coller l\'URL de cette page). ' +
+            'Ouverte seule, hors Grist, elle n\'a aucune table à lire.</div>';
+        return;
+    }
+    try { grist.ready({ requiredAccess: 'full' }); } catch (e) {}
+    try {
+        console.log("GRIST : charge table");
+        const [tables, savedCfg] = await Promise.all([grist.docApi.listTables(), loadSourceConfig()]);
+        gristConnected = true;
+        tableList = tables;
+        sourceConfig = savedCfg;
+        console.log("GRIST : tableList");
+        console.log(tableList);
+        console.log("GRIST : sourceConfig");
+        console.log(sourceConfig);
+        const el = document.getElementById('gristStatus');
+        if (el) el.textContent = '· Widget Grist connecté — ' + tableList.length + ' table(s) trouvée(s)';
+
+        if (!Object.keys(sourceConfig).length) {
+            document.getElementById('loadError').innerHTML =
+                '<div class="muted" style="padding:6px 0;">Aucune configuration enregistrée : détection automatique des tables…</div>';
+            await autoDetectAll();
+            saveSourceConfig();
+        }
+        await renderSourcesPanel();
+
+        if (sourceConfig.HN && sourceConfig.HN.table && MAQ_SOURCES.some(s => sourceConfig[s.id] && sourceConfig[s.id].table)) {
+            await chargerDonnees();
+        } else {
+            document.getElementById('loadError').innerHTML =
+                '<div class="error">Aucune table détectée automatiquement : configurez au moins la maquette LMD5 ' +
+                'et une maquette détaillée en section 0, puis cliquez sur « Charger les données ».</div>';
+        }
+    } catch (e) {
+        document.getElementById('loadError').innerHTML =
+            '<div class="error">Impossible de communiquer avec Grist : ' + escHtml(e && e.message || String(e)) +
+            '. Vérifiez que la page est ouverte comme widget personnalisé et que l\'accès complet au document a été autorisé.</div>';
+    }
+}
+init();
 </script>
 </body>
 </html>

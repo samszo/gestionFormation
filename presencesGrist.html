@@ -141,7 +141,10 @@
 const inGrist = typeof grist !== 'undefined' && window.self !== window.top;
 let gristConnected = false;
 if (inGrist) {
-    try { grist.ready({ requiredAccess: 'full' }); } catch (e) { console.log(e); }
+    try { 
+        grist.ready({ requiredAccess: 'full' }); 
+        console.log("GRIST : c'est parti");
+    } catch (e) { console.log(e); }
 }
 
 /* ------------------------------------------------------------------ utilitaires génériques */
@@ -228,6 +231,82 @@ const STATIC_SOURCES = {
     promotions: { label: 'Promotions', fields: PROMOTIONS_FIELDS, nameHints: ['promotions', 'promotion'] },
     cours:      { label: 'Cours',      fields: COURS_FIELDS,      nameHints: ['cours'] },
 };
+
+/* ------------------------------------------------------------------ provisionnement de la table
+   "etudiants" du formulaire Grist public (nom, prénom, mail, n° étudiant, promotions, compte
+   GitHub, photo). Portage en JS (grist.docApi.applyUserActions, accès complet) de l'ancien script
+   Python grist_etudiants_form.py qui passait par l'API REST + une clé API externe. Exécuté une
+   fois à l'initialisation du widget ; idempotent (ne touche à rien si la table est déjà à jour) et
+   sans effet sur le reste du widget en cas d'échec (table "promotions" absente, etc.). */
+const TABLE_ETUDIANTS_FORM = 'etudiants';
+// formule Python exécutée par Grist (colonne formule) à chaque saisie/modification d'un mail :
+// vérifie le format et renvoie un message d'erreur, ou '' si le mail est valide.
+const FORMULE_MAIL_ERREUR = [
+    "import re",
+    "mail = ($Mail or '').strip()",
+    "if not mail:",
+    "    return 'Mail requis'",
+    "if not re.match(r'^[^@\\s]+@[^@\\s]+\\.[a-zA-Z]{2,}$', mail):",
+    "    return 'Format de mail invalide'",
+    "return ''",
+].join('\n');
+
+/* colRef interne de `colId` dans `tableId`, via les tables de métadonnées _grist_Tables /
+   _grist_Tables_column (lisibles depuis un widget en accès complet) — sert à faire afficher, dans
+   la colonne de référence "Promotions", le code de la promotion plutôt que son numéro de ligne
+   interne (option de colonne `visibleCol`). Best-effort : la colonne Promotions reste créée sans
+   `visibleCol` si cette résolution échoue. */
+async function getColRef(tableId, colId) {
+    const tables = await grist.docApi.fetchTable('_grist_Tables');
+    const tIdx = (tables.tableId || []).findIndex(t => t === tableId);
+    if (tIdx === -1) return null;
+    const tableRef = tables.id[tIdx];
+    const cols = await grist.docApi.fetchTable('_grist_Tables_column');
+    const cIdx = (cols.colId || []).findIndex((c, i) => c === colId && cols.parentId[i] === tableRef);
+    return cIdx === -1 ? null : cols.id[cIdx];
+}
+function colonnesEtudiantsForm(promotionsTableId, promotionsVisibleColRef) {
+    const promoCol = { id: 'Promotions', type: 'Ref:' + promotionsTableId, label: 'Promotions' };
+    if (promotionsVisibleColRef) promoCol.visibleCol = promotionsVisibleColRef;
+    return [
+        { id: 'Nom', type: 'Text', label: 'Nom' },
+        { id: 'Prenom', type: 'Text', label: 'Prénom' },
+        { id: 'Mail', type: 'Text', label: 'Mail' },
+        { id: 'N_etudiant', type: 'Text', label: 'N° étudiant' },
+        promoCol,
+        { id: 'Compte_GitHub', type: 'Text', label: 'Compte GitHub' },
+        { id: 'Photo', type: 'Attachments', label: 'Photo' },
+        { id: 'Mail_erreur', type: 'Text', label: 'Erreur mail', isFormula: true, formula: FORMULE_MAIL_ERREUR },
+    ];
+}
+async function ensureEtudiantsTable() {
+    const promoTable = cfg.static.promotions && cfg.static.promotions.table;
+    let visibleRef = null;
+    if (promoTable) {
+        const codeCol = (cfg.static.promotions.cols && cfg.static.promotions.cols.code) || 'code';
+        visibleRef = await getColRef(promoTable, codeCol).catch(() => null);
+    }
+    const colonnes = colonnesEtudiantsForm(promoTable || 'Promotions', visibleRef);
+
+    if (!tableList.includes(TABLE_ETUDIANTS_FORM)) {
+        await grist.docApi.applyUserActions([['AddTable', TABLE_ETUDIANTS_FORM, colonnes]]);
+        tableList.push(TABLE_ETUDIANTS_FORM);
+        console.log('PROVISIONING : table "etudiants" créée avec les colonnes ' + colonnes.map(c => c.id).join(', '));
+        return;
+    }
+    const entry = await fetchTableFresh(TABLE_ETUDIANTS_FORM).catch(() => null);
+    const existantes = new Set(entry ? entry.cols : []);
+    const aAjouter = colonnes.filter(c => !existantes.has(c.id));
+    if (!aAjouter.length) { console.log('PROVISIONING : table "etudiants" déjà à jour.'); return; }
+    const actions = aAjouter.map(c => {
+        const info = Object.assign({}, c);
+        delete info.id;
+        return ['AddColumn', TABLE_ETUDIANTS_FORM, c.id, info];
+    });
+    await grist.docApi.applyUserActions(actions);
+    tableCache.delete(TABLE_ETUDIANTS_FORM);
+    console.log('PROVISIONING : colonnes ajoutées à "etudiants" : ' + aAjouter.map(c => c.id).join(', '));
+}
 
 /* ------------------------------------------------------------------ accès aux tables Grist */
 let tableList = [];
@@ -456,6 +535,7 @@ function onParcoursChange() {
     const parcours = document.getElementById('selParcours').value;
     const selPromotion = document.getElementById('selPromotion');
     const selCours = document.getElementById('selCours');
+    console.log('GRIST parcours = '+parcours);
     if (!parcours) {
         selPromotion.disabled = true; fillSelect(selPromotion, [], '— choisir un parcours —');
         selCours.disabled = true; fillSelect(selCours, [], '— choisir une promotion —');
@@ -655,9 +735,20 @@ async function init() {
     }
     try {
         cfg = await loadConfig();
+        console.log("GRIST : init");
+        console.log(cfg);
+
         await refreshTableList();
         await autoDetectStatic();
         saveConfig();
+        try {
+            await ensureEtudiantsTable();
+        } catch (e) {
+            console.log('PROVISIONING etudiants : échec', e);
+            document.getElementById('loadError').insertAdjacentHTML('beforeend',
+                '<div class="muted">Table « etudiants » du formulaire public non provisionnée automatiquement : ' +
+                escHtml(e && e.message || String(e)) + '</div>');
+        }
         await renderStaticSourcesPanel();
         await refreshSelects();
         wire();
